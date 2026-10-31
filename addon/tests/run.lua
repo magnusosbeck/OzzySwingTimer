@@ -109,7 +109,7 @@ function object:Hide() self.shown = false end
 for _, name in ipairs({"SetColorTexture", "SetWidth", "SetHeight", "SetFrameStrata", "SetClampedToScreen",
     "SetMovable", "RegisterForDrag", "StartMoving", "StopMovingOrSizing", "ClearAllPoints", "SetAllPoints",
     "SetFrameLevel", "SetSize", "SetScale", "EnableMouse", "SetClipsChildren", "SetRotation", "SetAlpha", "RegisterEvent",
-    "SetJustifyH", "SetTextColor", "SetTexture", "SetVertexColor", "SetBlendMode", "SetFont"}) do
+    "SetJustifyH", "SetTextColor", "SetTexture", "SetVertexColor", "SetBlendMode", "SetFont", "SetTexCoord"}) do
     object[name] = function() end
 end
 UIParent = newObject()
@@ -237,6 +237,10 @@ test("delay is painted red right of the bar with a decimal comma", function()
     assert(ns.display.delay.shown and ns.display.delay.text == "+0,8", tostring(ns.display.delay.text))
     ns.display:Paint({phase = "cooldown", fill = 0.5, cursor = 0.5, segments = {}})
     assert(not ns.display.delay.shown)
+    assert(#ns.display.border == 8)
+    SlashCmdList.OZZYSWINGTIMER("border 0,6"); near(OzzySwingTimerDB.border, 0.6)
+    SlashCmdList.OZZYSWINGTIMER("border 5"); near(OzzySwingTimerDB.border, 0.6)
+    SlashCmdList.OZZYSWINGTIMER("reset"); assert(OzzySwingTimerDB.border == nil)
     SlashCmdList.OZZYSWINGTIMER("breakeven 1,1"); near(ns.model.breakEven, 1.1); near(OzzySwingTimerDB.breakEven, 1.1)
     SlashCmdList.OZZYSWINGTIMER("breakeven 1.3")
 end)

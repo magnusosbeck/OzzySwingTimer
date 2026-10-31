@@ -1,4 +1,4 @@
-# Ozzy Swing Timer – TBC Classic 0.7.0
+# Ozzy Swing Timer – TBC Classic 0.7.1
 
 Första spelbara prototypen för **TBC Classic Anniversary 2.5.6**, Interface 20506.
 Själva addonmappen kräver inga bibliotek eller andra addons.
@@ -35,6 +35,7 @@ Baren använder spelets egen castbar-ram, gnista och statusbar-textur.
 | `/ozs` | Visa hjälp |
 | `/ozs size 300 20` | Bredd och höjd |
 | `/ozs scale 1` | Skala 0.5–3 |
+| `/ozs border 0.8` | Ramens tjocklek 0.4–2 (1 = som spelets castbar) |
 | `/ozs status` | Klientversion, skott, timing och GCD-status i chatten |
 | `/ozs windup auto` | Uppskatta wind-up och lär från observerad skottstart |
 | `/ozs windup 0.5` | Manuell wind-up i sekunder, vid kalibrering |

@@ -8,8 +8,11 @@ local STATUSBAR = "Interface\\TargetingFrame\\UI-StatusBar"
 local BORDER = "Interface\\CastingBar\\UI-CastingBar-Border"
 local SPARK = "Interface\\CastingBar\\UI-CastingBar-Spark"
 local FONT = "Fonts\\FRIZQT__.TTF"
--- Blizzard's casting bar is 195x13 with a 256x64 border anchored 28 px above its top; scale from that.
+-- Blizzard's casting bar is 195x13 inside a 256x64 border anchored 28 px above its top. The border is
+-- cut into nine slices at the bar opening, so its thickness (settings.border) is independent of bar size.
 local CAST_W, CAST_H, BORDER_W, BORDER_H, BORDER_TOP = 195, 13, 256, 64, 28
+local SIDE, BOTTOM = (BORDER_W - CAST_W) / 2, BORDER_H - BORDER_TOP - CAST_H
+Display.BORDER = 0.8
 
 local COLORS = {
     cooldown = {0.95, 0.72, 0.18},   -- slow phase: casting-bar gold
@@ -55,8 +58,20 @@ function Display:New(settings)
     local top = CreateFrame("Frame", nil, frame)
     top:SetAllPoints(frame)
     top:SetFrameLevel(frame:GetFrameLevel() + 3)
-    ui.border = top:CreateTexture(nil, "ARTWORK")
-    ui.border:SetTexture(BORDER)
+    ui.border = {}
+    for row = 1, 3 do
+        for col = 1, 3 do
+            if row ~= 2 or col ~= 2 then
+                local slice = top:CreateTexture(nil, "ARTWORK")
+                slice:SetTexture(BORDER)
+                local u = {0, SIDE, SIDE + CAST_W, BORDER_W}
+                local v = {0, BORDER_TOP, BORDER_TOP + CAST_H, BORDER_H}
+                slice:SetTexCoord(u[col] / BORDER_W, u[col + 1] / BORDER_W, v[row] / BORDER_H, v[row + 1] / BORDER_H)
+                slice.row, slice.col = row, col
+                ui.border[#ui.border + 1] = slice
+            end
+        end
+    end
     ui.spark = top:CreateTexture(nil, "OVERLAY")
     ui.spark:SetTexture(SPARK)
     ui.spark:SetBlendMode("ADD")
@@ -76,14 +91,18 @@ function Display:Layout()
     frame:ClearAllPoints()
     frame:SetPoint("CENTER", UIParent, "CENTER", settings.x, settings.y)
     frame:EnableMouse(not settings.locked)
-    local sx, sy = settings.width / CAST_W, settings.height / CAST_H
-    self.border:ClearAllPoints()
-    self.border:SetPoint("TOP", frame, "TOP", 0, BORDER_TOP * sy)
-    self.border:SetSize(BORDER_W * sx, BORDER_H * sy)
-    self.spark:SetSize(32 * sy, 32 * sy)
-    self.delay:SetFont(FONT, math.max(11, math.floor(settings.height * 0.8)), "OUTLINE")
+    local w, h, k = settings.width, settings.height, settings.border or Display.BORDER
+    local xs = {-SIDE * k, 0, w, w + SIDE * k}
+    local ys = {BORDER_TOP * k, 0, -h, -h - BOTTOM * k}
+    for _, slice in ipairs(self.border) do
+        slice:ClearAllPoints()
+        slice:SetPoint("TOPLEFT", frame, "TOPLEFT", xs[slice.col], ys[slice.row])
+        slice:SetPoint("BOTTOMRIGHT", frame, "TOPLEFT", xs[slice.col + 1], ys[slice.row + 1])
+    end
+    self.spark:SetSize(32 * h / CAST_H, 32 * h / CAST_H)
+    self.delay:SetFont(FONT, math.max(11, math.floor(h * 0.8)), "OUTLINE")
     self.delay:ClearAllPoints()
-    self.delay:SetPoint("LEFT", frame, "RIGHT", 10 * sx, 0)
+    self.delay:SetPoint("LEFT", frame, "RIGHT", 6 + 8 * k, 0)
 end
 
 function Display:Region(index)
