@@ -20,7 +20,7 @@ local function border(parent, thickness, r, g, b)
 end
 
 function Display:New(settings)
-    local ui = setmetatable({settings = settings, regions = {}, lastFlash = 0}, self)
+    local ui = setmetatable({settings = settings, regions = {}}, self)
     local frame = CreateFrame("Frame", "OzzySwingTimerBar", UIParent)
     ui.frame = frame
     frame:SetFrameStrata("MEDIUM")
@@ -45,22 +45,12 @@ function Display:New(settings)
     ui.lockLayer = CreateFrame("Frame", nil, frame)
     ui.lockLayer:SetAllPoints(frame)
     ui.lockLayer:SetFrameLevel(frame:GetFrameLevel() + 1)
-    ui.zone = CreateFrame("Frame", nil, frame)
-    ui.zone:SetFrameLevel(frame:GetFrameLevel() + 2)
-    border(ui.zone, 1, 0.40, 0.85, 0.84)
-    ui.zone:Hide()
     local cursorFrame = CreateFrame("Frame", nil, frame)
     cursorFrame:SetAllPoints(frame)
     cursorFrame:SetFrameLevel(frame:GetFrameLevel() + 3)
     ui.cursor = cursorFrame:CreateTexture(nil, "OVERLAY")
     color(ui.cursor, 1, 0.98, 0.90)
 
-    ui.flash = CreateFrame("Frame", nil, frame)
-    ui.flash:SetPoint("TOPLEFT", frame, "TOPLEFT", -5, 5)
-    ui.flash:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", 5, -5)
-    ui.flash:SetFrameLevel(frame:GetFrameLevel() + 4)
-    border(ui.flash, 4, 0.40, 1, 0.57)
-    ui.flash:Hide()
     ui:Layout()
     return ui
 end
@@ -86,7 +76,7 @@ function Display:Region(index)
     return region
 end
 
-function Display:Paint(view, now, state, forceVisible)
+function Display:Paint(view, forceVisible)
     if view.phase == "idle" and self.settings.locked and not forceVisible then self.frame:Hide(); return end
     self.frame:Show()
     local width, height = self.settings.width - 4, self.settings.height - 4
@@ -128,22 +118,9 @@ function Display:Paint(view, now, state, forceVisible)
     end
     for i = visible + 1, #self.regions do self.regions[i]:Hide() end
 
-    if view.window and view.window.duration > 0.0001 then
-        self.zone:ClearAllPoints()
-        self.zone:SetPoint("LEFT", self.frame, "LEFT", 2 + view.window.left * width, 0)
-        self.zone:SetSize(math.max(1, (1 - view.window.left) * width), height)
-        self.zone:Show()
-    else self.zone:Hide() end
     self.cursor:ClearAllPoints()
     self.cursor:SetPoint("CENTER", self.frame, "LEFT", 2 + view.cursor * width, 0)
     self.cursor:SetSize(2, height)
     if view.phase == "idle" then self.cursor:Hide() else self.cursor:Show() end
 
-    if state.flashSerial < self.lastFlash then self.flashStart = nil; self.flash:Hide() end
-    if state.flashSerial > self.lastFlash then self.flashStart = now end
-    self.lastFlash = state.flashSerial
-    if self.flashStart and now - self.flashStart < 0.35 then
-        self.flash:SetAlpha(1 - (now - self.flashStart) / 0.35)
-        self.flash:Show()
-    else self.flash:Hide() end
 end

@@ -4,8 +4,6 @@ Model.__index = Model
 ns.Model = Model
 
 local EPS = 0.0001
--- Observed in TBC 2.5.6: a cast pressed during wind-up is held by the client and starts at the release.
-local QUEUED_TOLERANCE = 0.1
 -- No real Auto Shot follows another this fast; closer reports are duplicates.
 Model.MIN_SHOT_GAP = 0.5
 local min, max = math.min, math.max
@@ -24,7 +22,6 @@ function Model:Reset()
     self.castStart, self.castEnd, self.castKey = 0, 0, nil
     self.gcdStart, self.gcdEnd, self.gcdKnown = 0, 0, false
     self.locks, self.shots = {}, 0
-    self.flashSerial, self.flashAt, self.flashShot = 0, nil, nil
     self.retryAt, self.waitingForShot = 0, false
 end
 
@@ -111,26 +108,16 @@ function Model:SetGCD(start, duration, now, known)
     end
 end
 
-function Model:QueueWindow(now, moving)
-    if not self.active or self.phase ~= "wind" or not self.gcdKnown or moving then return nil end
-    local start = max(self.windStart, self.castEnd, self.gcdEnd)
-    -- Retain completed action intervals so the full window does not shrink with the cursor.
-    for _, lock in ipairs(self.locks) do start = max(start, lock.finish) end
-    start = min(start, self.windEnd)
-    local duration = max(0, self.windEnd - start)
-    return {start = start, finish = self.windEnd, duration = duration,
-        left = clamp((start - self.windStart) / (self.windEnd - self.windStart), 0, 1),
-        open = duration > EPS and now >= start - EPS and now < self.windEnd + EPS}
-end
-
--- Flash once per shot when a cast starts at the release, i.e. it was queued during wind-up.
-function Model:CastStarted(now)
-    if not self.lastShot or now - self.lastShot > QUEUED_TOLERANCE or self.flashShot == self.shots then
-        return false
+-- Wind-up says "press now" when everything started before it (cast, GCD) ends by the shot.
+-- Otherwise the player is out of phase and should let one Auto Shot pass untouched.
+-- A press during this wind-up starts a new GCD; that one must not turn the bar red.
+function Model:InPhase(moving)
+    if not self.gcdKnown or moving or not self.windStart then return false end
+    local ready = 0
+    for _, lock in ipairs(self.locks) do
+        if lock.start < self.windStart - EPS then ready = max(ready, lock.finish) end
     end
-    self.flashShot = self.shots
-    self.flashSerial, self.flashAt = self.flashSerial + 1, now
-    return true
+    return ready <= self.windEnd + EPS
 end
 
 function Model:Shot(now)
@@ -209,9 +196,7 @@ function Model:View(now, moving)
     end
     if self.phase == "wind" then
         local p = clamp((now - self.windStart) / (self.windEnd - self.windStart), 0, 1)
-        local window = self:QueueWindow(now, moving)
-        return {phase = "wind", fill = p, cursor = p, green = window and window.open,
-            window = window, segments = {}}
+        return {phase = "wind", fill = p, cursor = p, green = self:InPhase(moving), segments = {}}
     end
     return {phase = "blocked", fill = 1, cursor = 0, segments = self:Segments()}
 end

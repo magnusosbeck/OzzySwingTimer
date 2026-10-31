@@ -168,8 +168,7 @@ local function demoView(now)
     state:UpsertLock("cast", "preview", release, release + 1.5)
     state:UpsertLock("gcd", "preview", release + 1.5, release + 2.5)
     if t >= 2.3 then state:BeginWind(release + 2.3, false) end
-    state.flashSerial = cycle + 1
-    return state:View(now, false), state
+    return state:View(now, false)
 end
 
 local function command(message)
@@ -177,7 +176,6 @@ local function command(message)
     cmd = string.lower(cmd or "")
     if cmd == "test" then
         demo = not demo and {started = GetTime()} or nil
-        display.lastFlash, display.flashStart = 0, nil
         say(demo and "Testläge på. /ozs test avslutar." or "Testläge av.")
     elseif cmd == "lock" or cmd == "unlock" then
         settings.locked = cmd == "lock"; display:Layout()
@@ -249,13 +247,12 @@ local function initialize()
         end
         if now >= nextSpeed then nextSpeed = now + 0.2; refreshSpeed(now) end
         if demo then
-            local view, state = demoView(now)
-            display:Paint(view, now, state, true)
+            display:Paint(demoView(now), true)
         else
             local isMoving = moving()
             model:Advance(now, isMoving)
             lastView = model:View(now, isMoving)
-            display:Paint(lastView, now, model)
+            display:Paint(lastView)
         end
     end)
 end
@@ -304,8 +301,7 @@ driver:SetScript("OnEvent", function(_, event, ...)
             if spellID == AUTO then windStart(now, "unit")
             else
                 readCast(now); readGCD(now)
-                local flashed = model:CastStarted(now)
-                log("CAST_START", spellID, {sinceShot = model.lastShot and now - model.lastShot, flashed = flashed})
+                log("CAST_START", spellID, {sinceShot = model.lastShot and now - model.lastShot})
             end
         elseif event == "UNIT_SPELLCAST_SUCCEEDED" then
             if spellID == AUTO then shot(now, "unit")

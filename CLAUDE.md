@@ -39,8 +39,8 @@ There is no test filter; `addon/tests/run.lua` is a single script of `test(name,
 
 Load order (from the `.toc`): `Model.lua` → `Display.lua` → `OzzySwingTimer.lua`. Files share state through the addon namespace (`local _, ns = ...`; `ns.Model`, `ns.Display`, and at runtime `ns.model`/`ns.display`).
 
-- **Model.lua** — pure timing state machine, no WoW API calls. Phases: weapon cooldown (slow fill right→left), wind-up (fast fill left→right), `blocked`. Tracks cast and GCD "locks" and renders their **union** (not sum) as `Segments()`, including GCD carried into the next cycle. `QueueWindow()` is the part of wind-up after the current cast/GCD ends. Flash confirmation is a sequence: `Sent` (eligible attempt in window) → `Shot` → `Confirm` (cast start); `Failed` cancels. `View(now)` produces what the display paints.
-- **Display.lua** — WoW frame/texture construction and `Paint(view, ...)`. In-game bar shows no text or numbers by design.
+- **Model.lua** — pure timing state machine, no WoW API calls. Phases: weapon cooldown (slow fill right→left), wind-up (fast fill left→right), `blocked`. Tracks cast and GCD "locks" and renders their **union** (not sum) as `Segments()`, including GCD carried into the next cycle. `InPhase()` makes wind-up green ("press now") when every lock that started before the wind-up ends by the shot, and red ("out of phase, let one Auto Shot pass untouched") otherwise; a GCD started by a press during the wind-up is ignored. There is no flash or queue-window frame by design. `View(now)` produces what the display paints.
+- **Display.lua** — WoW frame/texture construction and `Paint(view, forceVisible)`. In-game bar shows no text or numbers by design.
 - **OzzySwingTimer.lua** — event wiring, `/ozs` slash command (`SlashCmdList.OZZYSWINGTIMER`), SavedVariables `OzzySwingTimerDB`, debug log (last 200 events), and test/demo mode.
 
 Key modeling rules to preserve (see addon README for detail):

@@ -5,7 +5,7 @@ import {schedulePreview} from './dist/schedule-preview.mjs';
 import {queueWindow} from './dist/queue-window.mjs';
 import {pendulumView} from './dist/pendulum-view.mjs';
 import {actionBudget} from './dist/action-budget.mjs';
-import {windupWindow} from './dist/windup-window.mjs';
+import {inPhase} from './dist/windup-window.mjs';
 const run=c=>{const s=new Simulation(c);s.running=true;return s;};
 let s=run();s.advance(6.15);assert.equal(s.shots,3);assert.ok(s.delay<0.016);
 s=run();s.pressCast();assert.ok(s.queued);s.advance(.51);assert.equal(s.shots,1);assert.ok(s.castLeft>1.4);assert.equal(s.queued,false);
@@ -270,25 +270,14 @@ console.log('OK: Action lock uses actual start/max duration, mirrors late casts,
 
 const windupState={phase:'wind',config:{wind:.5,mode:'blocking',queue:true},t:2.4,progress:.1,
   actionLocks:[{start:1.5,end:2.5}],running:true,queued:false,moving:false,castLeft:0,gcdLeft:.1};
-let windup=windupWindow(windupState);
-assert.ok(Math.abs(windup.duration-.3)<1e-8);assert.ok(Math.abs(windup.fraction-.6)<1e-8);
-assert.ok(Math.abs(windup.left-.4)<1e-8);assert.equal(windup.open,false);
-assert.equal(windupWindow({...windupState,t:2.5,progress:.2,gcdLeft:0}).open,true);
-assert.equal(windupWindow({...windupState,t:2.5,progress:.2,gcdLeft:0,queued:true}).open,false);
-assert.equal(windupWindow({...windupState,actionLocks:[{start:2,end:3}]}).fraction,0);
-assert.ok(Math.abs(windupWindow({...windupState,actionLocks:[]}).fraction-1)<1e-8);
-assert.equal(windupWindow({...windupState,phase:'cooldown'}),null);
-assert.equal(windupWindow({...windupState,config:{...windupState.config,queue:false}}),null);
-console.log('OK: wind-up zone shows 300/500 ms (60%), respects live GCD and is absent in cooldown');
-
-assert.equal(pendulumView(windupState).color,'#ef6969');
-const inWindow={...windupState,t:2.5,progress:.2,gcdLeft:0};
-assert.equal(pendulumView(inWindow).color,'#c1ed85');
-assert.equal(pendulumView({...inWindow,queued:true}).color,'#c1ed85');
-assert.equal(pendulumView({...inWindow,running:false}).color,'#c1ed85');
-assert.equal(pendulumView({...inWindow,config:{...inWindow.config,queue:false}}).color,'#ef6969');
-assert.equal(pendulumView({...inWindow,phase:'cooldown'}).color,'#c1ed85');
-console.log('OK: wind-up red before queue window, green throughout window including after queueing and pause; cooldown unchanged');
+assert.equal(inPhase(windupState),true);
+assert.equal(inPhase({...windupState,actionLocks:[{start:1.5,end:2.9}]}),false);
+assert.equal(inPhase({...windupState,actionLocks:[{start:1.5,end:2.5},{start:2.35,end:3.85}]}),true);
+assert.equal(inPhase({...windupState,phase:'cooldown'}),null);
+assert.equal(pendulumView(windupState).color,'#c1ed85');
+assert.equal(pendulumView({...windupState,actionLocks:[{start:1.5,end:2.9}]}).color,'#ef6969');
+assert.equal(pendulumView({...windupState,phase:'cooldown'}).color,'#c1ed85');
+console.log('OK: wind-up green when earlier actions end by the shot, red when GCD hangs over it; own press keeps it green');
 
 s=run();assert.equal(s.queueAcceptCount,0);s.pressCast();assert.equal(s.queueAcceptCount,1);
 s.pressCast();assert.equal(s.queueAcceptCount,1);s.advance(.5);

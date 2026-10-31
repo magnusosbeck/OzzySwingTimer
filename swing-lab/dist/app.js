@@ -4,7 +4,7 @@ import {schedulePreview} from './schedule-preview.mjs';
 import {queueWindow} from './queue-window.mjs';
 import {pendulumView} from './pendulum-view.mjs';
 import {actionBudget} from './action-budget.mjs';
-import {renderWindupWindow} from './windup-window.mjs';
+import {renderWindupStatus} from './windup-window.mjs';
 const elements = new Map();
 const $ = id => {
   if (!elements.has(id)) elements.set(id, document.getElementById(id));
@@ -34,7 +34,6 @@ const rows = [
 $('timers').innerHTML = rows.map(([id, title, color, hint]) => `<div class="timer" style="--color:${color}"><div class="timerHead"><span id="${id}Title">${title}</span><span id="${id}Text">—</span></div><div class="track" role="progressbar" aria-label="${title}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="${id}Track"><div id="${id}Fill" class="fill"></div></div><small>${hint}</small></div>`).join('');
 let updateReadouts = true;
 let hudLockKey = '';
-let lastQueueAcceptCount = 0, queueFlash = null;
 function bar(id, value, label) {
   value = Math.max(0, Math.min(1, value));
   const fill = $(id + 'Fill'), transform = `scaleX(${value})`;
@@ -53,18 +52,7 @@ function render(readouts = true) {
   fill.style.transformOrigin = pendulum.origin;
   fill.style.background = pendulum.color;
   cursor.style.transform = `translateX(${pendulum.cursor * 100}%)`;
-  renderWindupWindow(sim, readouts);
-  if (sim.queueAcceptCount > lastQueueAcceptCount) {
-    queueFlash?.cancel();
-    queueFlash = $('pendulumTrack').animate([
-      {outlineWidth:'4px',outlineColor:'rgba(103,255,145,1)',boxShadow:'0 0 18px rgba(103,255,145,.8)'},
-      {outlineWidth:'4px',outlineColor:'rgba(103,255,145,.9)',boxShadow:'0 0 12px rgba(103,255,145,.5)',offset:.2},
-      {outlineWidth:'4px',outlineColor:'rgba(103,255,145,0)',boxShadow:'0 0 0 rgba(103,255,145,0)'}
-    ], {duration:350,easing:'ease-out'});
-  } else if (sim.queueAcceptCount < lastQueueAcceptCount) {
-    queueFlash?.cancel();
-  }
-  lastQueueAcceptCount = sim.queueAcceptCount;
+  if (readouts) renderWindupStatus(sim);
   if (readouts) {
     const budget = actionBudget(sim);
     const lockKey = JSON.stringify(budget.segments);

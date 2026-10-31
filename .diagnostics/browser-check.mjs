@@ -43,22 +43,23 @@ try {
   const bounds=await evaluate(`(()=>{const r=document.querySelector('.hud-preview').getBoundingClientRect();return {x:r.x,y:r.y,width:r.width,height:r.height,scale:1};})()`);
   const shot=await send('Page.captureScreenshot',{format:'png',captureBeyondViewport:false,clip:bounds},sessionId);
   writeFileSync('.diagnostics/weapon-cooldown-carry.png',Buffer.from(shot.data,'base64'));
-  const windupResult=await evaluate(`(()=>{const el=id=>document.getElementById(id),change=(id,value)=>{el(id).value=value;el(id).dispatchEvent(new Event('input'));};el('presetPrototype').click();el('autoCast').checked=false;el('autoCast').dispatchEvent(new Event('input'));change('interval','2.8');el('play').click();window.__advance(4100);el('cast').click();window.__advance(5600);el('instant').click();window.__advance(6500);const zone=el('hudWindupWindow');return {value:el('hudWindupWindowValue').textContent,left:zone.style.left,width:zone.style.width,hidden:zone.hidden,phase:el('pendulumPhase').textContent};})()`);
-  if(windupResult.hidden || Math.abs(parseFloat(windupResult.left)-40)>0.001 || Math.abs(parseFloat(windupResult.width)-60)>0.001)throw new Error('Incorrect wind-up zone geometry');
-  const redColor=await evaluate(`getComputedStyle(document.getElementById('pendulumFill')).backgroundColor`);
-  if(redColor!=='rgb(239, 105, 105)')throw new Error('Wind-up should be red before queue window');
+  // Prototype values; the page clock is at 3.6 s, so sim time = ms/1000 - 3.6.
+  // Shots at 0.5, 3.3, 6.1, 8.9 s; wind-ups 0.5 s before each.
+  await evaluate(`(()=>{const el=id=>document.getElementById(id),change=(id,value)=>{el(id).value=value;el(id).dispatchEvent(new Event('input'));};el('presetPrototype').click();el('autoCast').checked=false;el('autoCast').dispatchEvent(new Event('input'));change('interval','2.8');el('play').click();window.__advance(7700);el('cast').click();window.__advance(9400);})()`);
+  const fill=()=>evaluate(`getComputedStyle(document.getElementById('pendulumFill')).backgroundColor`);
+  const greenColor=await fill();
+  if(greenColor!=='rgb(193, 237, 133)')throw new Error('Wind-up should be green when the earlier cast/GCD ends before the shot');
   await evaluate(`document.getElementById('cast').click()`);
-  const rejectedFlash=await evaluate(`document.getElementById('pendulumTrack').getAnimations().length`);
-  if(rejectedFlash!==0)throw new Error('Rejected cast must not flash');
-  await evaluate(`window.__advance(6600)`);
-  const greenColor=await evaluate(`getComputedStyle(document.getElementById('pendulumFill')).backgroundColor`);
-  if(greenColor!=='rgb(193, 237, 133)')throw new Error('Wind-up should be green inside queue window');
-  await evaluate(`document.getElementById('cast').click()`);
-  const flash=await evaluate(`(()=>{const a=document.getElementById('pendulumTrack').getAnimations();return {count:a.length,duration:a[0]?.effect.getTiming().duration,outline:a[0]?.effect.getKeyframes()[0].outlineWidth};})()`);
-  if(flash.count!==1 || flash.duration!==350 || flash.outline!=='4px')throw new Error('Accepted queue must flash thick outline once');
-  const queuedColor=await evaluate(`getComputedStyle(document.getElementById('pendulumFill')).backgroundColor`);
-  if(queuedColor!==greenColor)throw new Error('Wind-up must remain green after queueing inside window');
-  console.log(JSON.stringify({windupResult,redColor,greenColor,queuedColor,rejectedFlash,flash}));
+  const queuedColor=await fill(), animations=await evaluate(`document.getElementById('pendulumTrack').getAnimations().length`);
+  if(queuedColor!==greenColor)throw new Error('Own press during wind-up must keep it green');
+  if(animations!==0)throw new Error('No flash on queue');
+  await evaluate(`window.__advance(11550);document.getElementById('instant').click();window.__advance(12100)`);
+  const redColor=await fill();
+  if(redColor!=='rgb(239, 105, 105)')throw new Error('Wind-up should be red when GCD hangs over it');
+  const status=await evaluate(`document.getElementById('hudWindupWindowValue').textContent`);
+  if(status!=='Ur fas')throw new Error('Status should say out of phase, got '+status);
+  const windupResult={status};
+  console.log(JSON.stringify({windupResult,greenColor,queuedColor,redColor,animations}));
   const windupShot=await send('Page.captureScreenshot',{format:'png',captureBeyondViewport:false,clip:bounds},sessionId);
   writeFileSync('.diagnostics/windup-window.png',Buffer.from(windupShot.data,'base64'));
   await send('Browser.close');

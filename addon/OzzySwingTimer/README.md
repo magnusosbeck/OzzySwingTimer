@@ -1,4 +1,4 @@
-# Ozzy Swing Timer – TBC Classic 0.2.1
+# Ozzy Swing Timer – TBC Classic 0.3.0
 
 Första spelbara prototypen för **TBC Classic Anniversary 2.5.6**, Interface 20506.
 Själva addonmappen kräver inga bibliotek eller andra addons.
@@ -21,10 +21,9 @@ Om du redan är inloggad: prova `/reload`. Starta om klienten om den nya mappen 
 Baren innehåller inga texter eller sekundvärden:
 
 - **Weapon cooldown:** långsam fyllning från höger till vänster.
-- **Auto Shot wind-up:** snabb fyllning från vänster till höger. Röd före köfönstret, grön i fönstret.
-- **Turkos ram:** köfönstrets del av wind-up.
+- **Auto Shot wind-up, grön:** dags att trycka. Steady Shot köas till skottet, och dess GCD börjar redan vid trycket.
+- **Auto Shot wind-up, röd:** ur fas. Cast eller GCD hänger kvar över wind-up. Tryck inget, låt ett orört Auto Shot gå för att komma i takt igen.
 - **Blå diagonal markering:** faktisk spell cast och GCD tillsammans. Överlapp räknas en gång; GCD som fortsätter in i nästa cykel visas där också.
-- **Grön flash:** en cast som startar i samma ögonblick som Auto Shot avfyras, det vill säga ett tryck som köades under wind-up. En gång per skott.
 
 ## Kommandon
 
@@ -62,10 +61,9 @@ Vapenbyte rensar inlärningen. `/ozs status` visar vilken källa som används.
 
 Observerat i TBC 2.5.6 (SpellQueueWindow 400 ms): en Steady Shot som trycks under
 wind-up hålls av klienten och skickas och startar exakt när Auto Shot avfyras.
-Skottet avbryts inte. Flashen bekräftar just det: casten startade högst 0,1 s efter
-avfyrningen. Köfönstret visar delen av wind-up efter aktuell cast/GCD; om ett tryck
-före GCD:s slut också köas är ännu inte testat. En flash garanterar inte att
-rotationen var optimal eller fri från clipping.
+Skottet avbryts inte, och GCD börjar vid trycket. Wind-up är grön när allt som
+startade före wind-up (cast, GCD) är klart senast vid skottet. Ett tryck under en
+GCD som hänger kvar över wind-up gav i ett mätfall en omstartad wind-up (0,95 s clipping).
 
 GCD blockerar inte Auto Shot i modellen. Casts, rörelse och rapporterade misslyckade
 skott hanteras separat. Om inget skott rapporteras startar ingen påhittad ny cykel.
@@ -77,7 +75,7 @@ Inga spells kastas automatiskt av addonen.
 Lua-modellen och händelsekopplingen testas med simulerade WoW-API:er i
 `addon/tests/run.lua`. Skott, vapenintervall, wind-up och köning av Steady Shot
 har mätts i spelklienten (se `docs/timing-design.md`), liksom GCD-läsningen och
-flash-regeln (0.2.0). Testprotokollet finns i `/ozs panel`.
+GCD-start vid trycket (0.2.0). Testprotokollet finns i `/ozs panel`.
 Forever-portningen kommer senare.
 
 API-underlag: [Blizzards genererade Spell-API för Anniversary](https://github.com/Gethe/wow-ui-source/blob/classic_anniversary/Interface/AddOns/Blizzard_APIDocumentationGenerated/SpellDocumentation.lua)

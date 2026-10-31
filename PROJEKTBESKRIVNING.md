@@ -41,9 +41,11 @@ Grunden är en pendelbar:
 
 1. Under **Weapon cooldown** fylls baren långsamt från höger till vänster.
 2. Under **Auto Shot wind-up** vänder den och fylls snabbt från vänster till höger.
-3. Wind-up är **röd före köfönstret** och **grön när rörelsen befinner sig i fönstret**. En turkos ram markerar själva området.
-4. En **blå diagonal markering** visar hur mycket av Weapon cooldown som upptas av cast/GCD. Om en spärr fortsätter in i nästa cykel visas den där också.
-5. En **grön outline-flash** bekräftar ett tajmat castförsök. I spelprototypen krävs även efterföljande spelhändelser som bekräftar casten och nästa skott.
+3. Wind-up är **grön** när det är dags att trycka: Steady Shot köas till skottet och GCD börjar redan vid trycket, så GCD-tid tjänas in.
+4. Wind-up är **röd** när spelaren är ur fas, alltså när cast eller GCD hänger kvar över wind-up. Då ska spelaren inte trycka utan låta ett orört Auto Shot gå för att komma i takt igen.
+5. En **blå diagonal markering** visar hur mycket av Weapon cooldown som upptas av cast/GCD, så att spelaren grovt ser hur mycket tid som är kvar för en spell till. Om en spärr fortsätter in i nästa cykel visas den där också.
+
+Målet (2026-10-31): få plats med en Steady Shot och en instant i den långsamma fasen utan att Auto Shot skjuts upp. Om det får plats beror på vapnet och haste. Flashen och den turkosa ramen är borttagna (0.3.0); signalen ska gå att läsa i ögonvrån.
 
 Spelversionen visar bara baren och dess innehåll, utan fasnamn eller sekundvärden. Mer detaljerad information hör hemma i simulatorn eller diagnostiken.
 
