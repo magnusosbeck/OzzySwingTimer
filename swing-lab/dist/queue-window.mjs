@@ -12,8 +12,10 @@ export function queueWindow(config, includeInstant = true) {
   if (castEnd > windStart + 1e-8) {
     return {available: false, start: end, end, duration: 0, reason: 'clipping'};
   }
+  // With gcdStart 'press', a queued cast's GCD began at the press in the preceding wind-up.
+  const gcdStart = press >= windStart - 1e-8 && config.gcdStart === 'press' ? press - end : castStart;
   const instantEnd = includeInstant ? Math.max(0, Math.min(1, config.instantOffset)) * end + config.gcd : 0;
-  const ready = Math.max(castEnd, castStart + config.gcd, instantEnd);
+  const ready = Math.max(castEnd, gcdStart + config.gcd, instantEnd);
   const start = Math.min(end, Math.max(windStart, ready));
   const duration = Math.max(0, end - start);
   return {available: duration > 1e-8, start, end, duration,

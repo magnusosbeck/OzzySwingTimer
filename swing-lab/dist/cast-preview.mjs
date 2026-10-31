@@ -28,13 +28,13 @@ export function castPreview({interval, wind, duration, castOffset, mode, queue})
   return {segments, visible: segments.reduce((sum, s) => sum + s.duration, 0), overflow, queued, rejected: false};
 }
 
-// GCD follows the accepted cast start and can continue across wind-up/release.
-// Unlike cast shading, it is projected across the entire nominal shot cycle.
+// GCD follows the accepted cast start, or the press when gcdStart is 'press',
+// and can continue across wind-up/release. It is projected across the entire nominal shot cycle.
 export function gcdPreview(config) {
   const cast = castPreview(config), duration = config.gcd ?? 1, segments = [];
   if (cast.rejected) return {segments, duration, queued: false, rejected: true};
-  const start = cast.queued ? config.interval :
-    Math.max(0, Math.min(1, config.castOffset)) * config.interval;
+  const press = Math.max(0, Math.min(1, config.castOffset)) * config.interval;
+  const start = cast.queued && config.gcdStart !== 'press' ? config.interval : press;
   const end = start + duration;
   for (let cycle = Math.floor(start / config.interval); cycle * config.interval < end - 1e-8; cycle++) {
     const origin = cycle * config.interval;

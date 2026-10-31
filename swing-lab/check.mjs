@@ -300,3 +300,22 @@ const automatic=run({autoCast:true,castOffset:.97});automatic.advance(3.31);
 assert.equal(automatic.queueAcceptCount,1);assert.equal(automatic.queued,false);
 automatic.reset();assert.equal(automatic.queueAcceptCount,0);
 console.log('OK: flash event fires once per accepted queue, never on cooldown/rejection and survives release before rendering');
+
+// Measured in TBC 2.5.6: a cast queued in wind-up starts at release, but its GCD starts at the press.
+const measured={interval:2.29,wind:.36,gcd:1.5,duration:1.15};
+for(const [gcdStart,left] of [['press',1.34],['cast',1.5]]){
+  const g=run({...measured,gcdStart});g.advance(.2);assert.ok(g.pressCast());assert.ok(g.queued);
+  assert.ok(Math.abs(g.gcdLeft-(gcdStart==='press'?1.5:0))<1e-6);
+  g.advance(.161);assert.equal(g.shots,1);assert.ok(Math.abs(g.castLeft-1.15)<.002);
+  assert.ok(Math.abs(g.gcdLeft-left)<.002,gcdStart+' gcdLeft '+g.gcdLeft);
+  assert.ok(Math.abs(g.actionLocks.at(-1).end-g.t-Math.max(1.15,left))<.002);
+}
+const pressGcd=gcdPreview({...measured,castOffset:.95,mode:'blocking',queue:true,gcdStart:'press'});
+assert.ok(pressGcd.queued);assert.equal(pressGcd.segments[0].cycle,0);
+assert.ok(Math.abs(pressGcd.segments[0].start-.95*2.29)<1e-6);
+const castGcd=gcdPreview({...measured,castOffset:.95,mode:'blocking',queue:true,gcdStart:'cast'});
+assert.equal(castGcd.segments[0].cycle,1);assert.equal(castGcd.segments[0].start,0);
+const pressWindow=queueWindow({...measured,gcd:2,castOffset:.95,mode:'blocking',queue:true,gcdStart:'press'},false);
+const castWindow=queueWindow({...measured,gcd:2,castOffset:.95,mode:'blocking',queue:true,gcdStart:'cast'},false);
+assert.ok(Math.abs(pressWindow.duration-.36)<1e-6);assert.ok(Math.abs(castWindow.duration-.29)<1e-6);
+console.log('OK: GCD from press runs during wind-up, cast still starts at release; previews follow the setting');

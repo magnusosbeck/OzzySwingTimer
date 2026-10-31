@@ -115,3 +115,5 @@
 .track .fill { width:100%; transform:scaleX(0); transform-origin:left center; will-change:transform; }
 #fps { color:var(--muted); font-size:10px; font-variant-numeric:tabular-nums; white-space:nowrap; }
 @media(max-width:530px) { .auto-heading { align-items:flex-start; flex-direction:column; } }
+
+.presets{display:flex;flex-wrap:wrap;gap:8px;margin:4px 0 8px}

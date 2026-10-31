@@ -3,7 +3,8 @@
 const EPS = 1e-8;
 export class Simulation {
   constructor(config = {}) {
-    this.config = {interval: 2.8, wind: 0.5, duration: 1.5, gcd: 1, mode: 'blocking', queue: true,
+    // gcdStart 'press': a cast queued in wind-up starts its GCD at the press (measured in TBC 2.5.6).
+    this.config = {interval: 2.8, wind: 0.5, duration: 1.5, gcd: 1, gcdStart: 'cast', mode: 'blocking', queue: true,
       autoCast: false, castOffset: 0, autoInstant: false, instantOffset: .6, warmup: false, ...config};
     this.reset();
   }
@@ -37,12 +38,16 @@ export class Simulation {
     this.actionLocks.push({kind, start: this.t, end: this.t + duration});
     if (this.actionLocks.length > 32) this.actionLocks.shift();
   }
-  startCast() {
-    this.castLeft = this.config.duration;
+  startGcd() {
     this.gcdLeft = this.config.gcd;
     this.gcdSource = 'cast';
     this.gcdShot = this.shots;
-    this.recordActionLock('cast', Math.max(this.config.duration, this.config.gcd));
+  }
+  startCast(fromQueue = false) {
+    this.castLeft = this.config.duration;
+    // A queued press may already have started its GCD.
+    if (!(fromQueue && this.config.gcdStart === 'press')) this.startGcd();
+    this.recordActionLock('cast', Math.max(this.config.duration, this.gcdLeft));
     this.log('Spellens cast startar');
     this.message = 'Spellens cast pågår.';
   }
@@ -70,6 +75,7 @@ export class Simulation {
       if (this.config.queue) {
         this.log('Spell köad efter Auto Shot'); this.queued = true;
         this.queueAcceptCount++;
+        if (this.config.gcdStart === 'press') this.startGcd();
         this.message = 'Spell köad — Auto Shot får bli klart först.'; return true;
       }
       this.message = 'Cast avvisad under uppdragningen i denna försöksregel.';
@@ -193,7 +199,7 @@ export class Simulation {
         this.expected = this.t + this.config.interval;
         this.lastRelease = this.t; this.autoAttempted = false; this.instantAttempted = false; this.castFinishedAt = null;
         this.phase = 'cooldown'; this.progress = 0;
-        if (this.queued) { this.queued = false; this.startCast(); }
+        if (this.queued) { this.queued = false; this.startCast(true); }
         this.attemptAutomaticCast();
       }
     }
