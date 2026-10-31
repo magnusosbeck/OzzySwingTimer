@@ -191,12 +191,17 @@ test("test panel buttons start a log, mark steps and count shots", function()
         error("no button " .. label)
     end
     click("Ny logg"); assert(OzzySwingTimerDB.debug)
-    click("2 Steady röd")
+    click("2 Steady tidigt")
     local last = OzzySwingTimerDB.events[#OzzySwingTimerDB.events]
-    assert(last.event == "MARK" and last.note == "steady röd")
+    assert(last.event == "MARK" and last.note == "steady tidigt")
     now = 240; event("UNIT_SPELLCAST_SUCCEEDED", "player", "p1", 75); panel:Refresh(true)
     assert(panel.status.text:find("skott: 1"), panel.status.text)
-    assert(panel.instruction.text:find("blir röd"))
+    assert(panel.instruction.text:find("vänder till wind%-up"))
+    -- Tool row: move/lock toggles the bar lock and its own label; test mode toggles the demo.
+    local locked = OzzySwingTimerDB.locked
+    click(locked and "Flytta" or "Lås"); assert(OzzySwingTimerDB.locked ~= locked)
+    click(OzzySwingTimerDB.locked and "Flytta" or "Lås"); assert(OzzySwingTimerDB.locked == locked)
+    click("Testläge"); click("Testläge"); click("Status")
     SlashCmdList.OZZYSWINGTIMER("debug off"); SlashCmdList.OZZYSWINGTIMER("panel")
     assert(not panel.frame.shown)
 end)
