@@ -1,5 +1,5 @@
 local addonName, ns = ...
-local AUTO, GCD = 75, 61304
+local AUTO, GCD, STEADY = 75, 61304, 34120
 -- 61304 reports no cooldown in TBC 2.5.6. Spells without a cooldown of their own show exactly the GCD:
 -- Steady Shot, Hunter's Mark and Serpent Sting (rank 1 stays known).
 local GCD_REFERENCES = {34120, 1130, 1978}
@@ -193,6 +193,12 @@ local function command(message)
         local scale = tonumber(rest)
         if scale and scale >= 0.5 and scale <= 3 then settings.scale = scale; display:Layout()
         else say("/ozs scale 1 (0.5–3)") end
+    elseif cmd == "breakeven" then
+        local value = tonumber((rest:gsub(",", ".")))
+        if value and value >= 0 and value <= 3 then
+            settings.breakEven = value; model.breakEven = value
+            say(string.format("Brytpunkt %.1f s: förskjutning efter en extra spell visas gul upp till detta.", value))
+        else say("/ozs breakeven 1.3 (0–3 s)") end
     elseif cmd == "windup" then
         local wind = tonumber(rest)
         if rest == "auto" then settings.windup = nil
@@ -215,7 +221,7 @@ local function command(message)
         say("Wind-up: " .. (ns.windSource or "okänd") .. ". GCD läses från spell " .. gcdSpell ..
             ": " .. (model.gcdKnown and "tillgängligt" or "okänt"))
     else
-        say("/ozs test · panel · unlock · lock · size 300 20 · scale 1 · status · debug on/off · mark <text> · windup auto/0.5 · reset")
+        say("/ozs test · panel · unlock · lock · size 300 20 · scale 1 · status · debug on/off · mark <text> · breakeven 1.3 · windup auto/0.5 · reset")
     end
 end
 
@@ -231,6 +237,7 @@ local function initialize()
     if not number(settings.windup) then settings.windup = nil end
     model, display = ns.Model:New(), ns.Display:New(settings)
     ns.model, ns.display = model, display
+    if number(settings.breakEven) then model.breakEven = settings.breakEven end
     ns.panel = ns.TestPanel:New(settings)
     SlashCmdList.OZZYSWINGTIMER = command
     SLASH_OZZYSWINGTIMER1 = "/ozs"
@@ -315,7 +322,14 @@ driver:SetScript("OnEvent", function(_, event, ...)
         elseif event == "UNIT_SPELLCAST_SUCCEEDED" then
             if spellID == AUTO then shot(now, "unit")
             elseif spellID == 5384 then model:Stop()
-            else readGCD(now); log("CAST_SUCCESS", spellID) end
+            else
+                readGCD(now)
+                -- Extra spell: anything but Steady Shot whose GCD began at its press (up to ~0.5 s before
+                -- it was sent, as observed). Off-GCD pet commands such as Kill Command do not count.
+                local extra = spellID ~= STEADY and model.gcdStart > 0 and now - model.gcdStart <= 0.6
+                if extra then model:ExtraSpell(now) end
+                log("CAST_SUCCESS", spellID, {extra = extra or nil})
+            end
         elseif event == "UNIT_SPELLCAST_FAILED" or event == "UNIT_SPELLCAST_FAILED_QUIET" or event == "UNIT_SPELLCAST_INTERRUPTED" then
             if spellID == AUTO then model:AutoFailed(now) end
             log(event, spellID)

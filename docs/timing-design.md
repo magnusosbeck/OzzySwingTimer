@@ -115,6 +115,19 @@ Det är ett enda fall, men det stöder att den röda zonen (GCD inte klar) är v
 när man trycker under wind-up, men skottet går ändå. Addonen tolkade det som blockerat
 och tappade wind-up-visningen. Det ignoreras nu under en observerad wind-up.
 
+### Rotation 3:2 och skada (addon 0.4–0.5), 2026-10-31
+
+**Rotation Steady varje cykel + instant varannan (Serpent Sting):** 12 cykler, 18 GCD-förmågor
+(taket 1,5 per cykel). Auto Shot i snitt 2,44 s mot 2,29 s, alltså cirka 0,15 s förskjutning per cykel.
+Hypotes: en handling som slutar inom cirka 0,4 s före wind-up skjuter upp skottet 0,2–0,35 s.
+Varje tryck i långsam fas skickades 0,15–0,47 s efter GCD-starten (trycket); makro eller klientkö okänt.
+
+**Skada (38 egna träffar, utan pet):** väntevärde med 24 % crit och crit-multiplikator 2,41:
+Auto Shot 632, Steady Shot 561, Arcane Shot 698. Brytpunkt för en extra spell
+= skada × cykeltid / (Auto Shot + Steady): Arcane cirka 1,3 s (2,29 s cykel), 1,2 s (Quick Shots).
+Steady sen i fasen lönar sig fortfarande upp till cirka 1,1 s förskjutning. Auto Shot och Steady
+är fysiska (rustning), Arcane inte. Litet underlag; uppdatera med fler fights.
+
 **Inte mätt än:** Aimed Shot (en tidigare logg visade cirka 2,2 s till nästa skottstart),
 haste-effekter på GCD och wind-up, och tryck utan makro.
 

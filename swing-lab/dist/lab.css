@@ -120,3 +120,4 @@
 .pendulum-row{display:flex;align-items:center;gap:8px}
 .pendulum-row .pendulum-track{flex:1}
 .pendulum-delay{min-width:3.2em;color:#ef6969;font-weight:600;font-size:13px;font-variant-numeric:tabular-nums}
+.pendulum-delay.worth{color:#e8c547}

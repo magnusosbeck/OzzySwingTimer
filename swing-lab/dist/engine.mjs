@@ -4,7 +4,7 @@ const EPS = 1e-8;
 export class Simulation {
   constructor(config = {}) {
     // gcdStart 'press': a cast queued in wind-up starts its GCD at the press (measured in TBC 2.5.6).
-    this.config = {interval: 2.8, wind: 0.5, duration: 1.5, gcd: 1, gcdStart: 'cast', mode: 'blocking', queue: true,
+    this.config = {interval: 2.8, wind: 0.5, duration: 1.5, gcd: 1, gcdStart: 'cast', breakEven: 1.3, mode: 'blocking', queue: true,
       autoCast: false, castOffset: 0, autoInstant: false, instantOffset: .6, warmup: false, ...config};
     this.reset();
   }
@@ -13,7 +13,8 @@ export class Simulation {
       progress: 0, castLeft: 0, gcdLeft: 0, gcdSource: null, gcdShot: null, queued: false, shots: 0, spells: 0, instants: 0,
       delay: null, totalDelay: 0, expected: this.config.wind, lastRelease: null, dpsSample: null,
       castFinishedAt: null, measurementStart: null, actionLocks: [], queueAcceptCount: 0,
-      autoAttempted: false, instantAttempted: false, autoMisses: 0, instantMisses: 0,
+      autoAttempted: false, instantAttempted: false,
+      lastInstantAt: null, releaseBefore: null, delayWorthIt: false, autoMisses: 0, instantMisses: 0,
       events: [], eventVersion: (this.eventVersion ?? 0) + 1,
       message: 'Starta simuleringen. Första Auto Shot börjar med en uppdragning.'});
   }
@@ -92,6 +93,7 @@ export class Simulation {
       this.message = 'Arcane Shot avvisad: cast, kö eller GCD är inte klar.'; return false;
     }
     this.instants++;
+    this.lastInstantAt = this.t;
     this.gcdLeft = this.config.gcd;
     this.gcdSource = 'instant';
     this.gcdShot = this.shots;
@@ -168,6 +170,10 @@ export class Simulation {
         this.delay = Math.max(0, this.t - this.expected);
         if (this.delay < EPS) this.delay = 0;
         this.totalDelay += this.delay;
+        // An instant's GCD often costs time only in the following cycle: look back two releases.
+        const since = this.releaseBefore ?? this.lastRelease ?? -Infinity;
+        this.delayWorthIt = this.delay > EPS && this.lastInstantAt !== null &&
+          this.lastInstantAt > since && this.delay <= this.config.breakEven;
         this.log('Auto Shot · 10 skada' + (this.delay > 0.001 ? ' · +' + this.delay.toFixed(3) + ' s' : ''));
         // The tenth Auto Shot is the anchor; its damage belongs to warm-up.
         // Damage after this instant is measured through complete release cycles.
@@ -197,6 +203,7 @@ export class Simulation {
                 'Parallella casts blockerar inte uppdragningen' : 'Ingen avslutad cast denna cykel'};
         }
         this.expected = this.t + this.config.interval;
+        this.releaseBefore = this.lastRelease;
         this.lastRelease = this.t; this.autoAttempted = false; this.instantAttempted = false; this.castFinishedAt = null;
         this.phase = 'cooldown'; this.progress = 0;
         if (this.queued) { this.queued = false; this.startCast(true); }

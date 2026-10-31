@@ -314,3 +314,12 @@ const measuredPair={interval:2.29,wind:.36,gcd:1.5,duration:1.11,gcdStart:'press
 assert.ok(schedulePreview({...measuredPair,castOffset:.95,instantOffset:.62},false).valid);
 assert.equal(schedulePreview({...measuredPair,castOffset:.95,instantOffset:.62},true).valid,false);
 console.log('OK: Steady Shot alone fits every cycle; Steady + instant conflicts via GCD with measured values');
+
+// Delay after an instant is "worth it" below break-even; a cast alone is not (prototype values).
+const worth=run({gcdStart:'cast'});worth.advance(1);assert.ok(worth.pressInstant());worth.advance(1);
+assert.ok(worth.pressCast());worth.advance(2.1);assert.ok(Math.abs(worth.delay-.7)<.002);assert.equal(worth.delayWorthIt,true);
+const alone=run({gcdStart:'cast'});alone.advance(2);assert.ok(alone.pressCast());alone.advance(2.1);
+assert.ok(Math.abs(alone.delay-.7)<.002);assert.equal(alone.delayWorthIt,false);
+const strict=run({gcdStart:'cast',breakEven:.5});strict.advance(1);strict.pressInstant();strict.advance(1);strict.pressCast();strict.advance(2.1);
+assert.equal(strict.delayWorthIt,false);
+console.log('OK: delay after an instant is yellow below break-even, red alone or above it');

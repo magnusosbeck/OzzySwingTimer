@@ -11,6 +11,8 @@ Model.DELAY_THRESHOLD = 0.15
 -- Observed: a Steady Shot pressed up to 0.16 s before the reported wind-up start was still queued to
 -- the shot (the report arrives after latency). Presses within SpellQueueWindow (400 ms) count as queued.
 Model.PRESS_LEAD = 0.4
+-- Delay an extra spell may cost and still gain DPS (break-even). Measured ~1.3 s for Arcane at 2.29 s.
+Model.BREAK_EVEN = 1.3
 local min, max = math.min, math.max
 local function clamp(value, low, high) return max(low, min(high, value)) end
 
@@ -28,6 +30,8 @@ function Model:Reset()
     self.gcdStart, self.gcdEnd, self.gcdKnown = 0, 0, false
     self.locks, self.shots = {}, 0
     self.lastDelay, self.continuous = nil, false
+    self.delayWorthIt, self.extraSpellAt, self.shotBefore = false, nil, nil
+    self.breakEven = self.breakEven or Model.BREAK_EVEN
     self.retryAt, self.waitingForShot = 0, false
 end
 
@@ -127,11 +131,19 @@ function Model:InPhase(moving)
     return ready <= self.windEnd + EPS
 end
 
+-- A GCD spell besides the main cast (e.g. Arcane Shot) that may justify a delayed shot.
+function Model:ExtraSpell(now) self.extraSpellAt = now end
+
 function Model:Shot(now)
     if self.lastShot and now - self.lastShot < Model.MIN_SHOT_GAP then return false end
     -- Delay versus an undisturbed cycle; only between shots of one continuous Auto Shot run.
     local delay = self.continuous and self.lastShot and now - self.lastShot - self.speed
     self.lastDelay = delay and delay >= Model.DELAY_THRESHOLD and delay < self.speed and delay or nil
+    -- An extra spell's GCD often costs time only in the following cycle, so look back two cycles.
+    local since = self.shotBefore or self.lastShot
+    self.delayWorthIt = self.lastDelay ~= nil and self.extraSpellAt ~= nil and since ~= nil and
+        self.extraSpellAt > since and self.lastDelay <= self.breakEven
+    self.shotBefore = self.continuous and self.lastShot or nil
     self.continuous = true
     self.shots = self.shots + 1
     self.active, self.phase = true, "cooldown"
@@ -203,12 +215,14 @@ function Model:View(now, moving)
     if self.phase == "idle" then return {phase = "idle", fill = 0, cursor = 1, segments = {}} end
     if self.phase == "cooldown" then
         local p = clamp((now - self.cooldownStart) / (self.cooldownEnd - self.cooldownStart), 0, 1)
-        return {phase = "cooldown", fill = p, cursor = 1 - p, segments = self:Segments(), delay = self.lastDelay}
+        return {phase = "cooldown", fill = p, cursor = 1 - p, segments = self:Segments(), delay = self.lastDelay,
+            delayWorthIt = self.delayWorthIt}
     end
     if self.phase == "wind" then
         local p = clamp((now - self.windStart) / (self.windEnd - self.windStart), 0, 1)
         return {phase = "wind", fill = p, cursor = p, green = self:InPhase(moving), segments = {},
-            delay = self.lastDelay}
+            delay = self.lastDelay, delayWorthIt = self.delayWorthIt}
     end
-    return {phase = "blocked", fill = 1, cursor = 0, segments = self:Segments(), delay = self.lastDelay}
+    return {phase = "blocked", fill = 1, cursor = 0, segments = self:Segments(), delay = self.lastDelay,
+        delayWorthIt = self.delayWorthIt}
 end

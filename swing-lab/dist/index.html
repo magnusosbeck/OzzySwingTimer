@@ -73,6 +73,8 @@
 <p class="hint">Uppmätt: en cast som köas under wind-up startar vid skottet, men dess GCD löper redan från trycket.</p>
 <label>Steady Shot cast <output id="durationValue"></output><input id="duration" type="range" min="0.5" max="3" step="0.01" value="1.11"></label>
 <p class="hint">Steady Shots casttid med din ranged haste (grund 1,5 s).</p>
+<label>Brytpunkt för instant <output id="breakEvenValue"></output><input id="breakEven" type="range" min="0" max="3" step="0.1" value="1.3"></label>
+<p class="hint">Förskjutning som en instant får kosta och ändå ge mer DPS. Uppmätt cirka 1,3 s för Arcane (skada 698 mot Auto Shot 632 + Steady 561). Under brytpunkten visas siffran gul, annars röd.</p>
 <p class="hint">Arcane Shot står för valfri instant (Arcane Shot, Multi-Shot …): ingen casttid och 1,5 s GCD. Egna cooldowns modelleras inte; det intressanta är hur Steady Shot och instanten påverkar varandra via GCD.</p>
 <label>Uppspelningshastighet<select id="speed"><option value="0.25">0,25× · detaljstudie</option><option value="0.5">0,5× · långsamt</option><option value="1" selected>1× · normal</option><option value="2">2× · snabbt</option><option value="5">5× · mycket snabbt</option></select></label>
 <p class="hint">Hastigheten ändrar bara hur fort simulerad tid går. DPS räknas per simulerad sekund.</p>

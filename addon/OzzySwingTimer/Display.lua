@@ -50,10 +50,10 @@ function Display:New(settings)
     cursorFrame:SetFrameLevel(frame:GetFrameLevel() + 3)
     ui.cursor = cursorFrame:CreateTexture(nil, "OVERLAY")
     color(ui.cursor, 1, 0.98, 0.90)
-    -- Red Auto Shot delay of the last shot, right of the bar, e.g. "+0,8".
+    -- Auto Shot delay of the last shot, right of the bar, e.g. "+0,8":
+    -- yellow when an extra spell caused it and it stays below break-even, red otherwise.
     ui.delay = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     ui.delay:SetPoint("LEFT", frame, "RIGHT", 6, 0)
-    ui.delay:SetTextColor(1, 0.35, 0.35)
     ui.delay:Hide()
 
     ui:Layout()
@@ -129,6 +129,8 @@ function Display:Paint(view, forceVisible)
     if view.phase == "idle" then self.cursor:Hide() else self.cursor:Show() end
     if view.delay then
         self.delay:SetText((string.format("+%.1f", view.delay):gsub("%.", ",")))
+        if view.delayWorthIt then self.delay:SetTextColor(0.95, 0.80, 0.30)
+        else self.delay:SetTextColor(1, 0.35, 0.35) end
         self.delay:Show()
     else self.delay:Hide() end
 

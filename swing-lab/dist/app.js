@@ -18,7 +18,7 @@ function text(id, value) {
 const sim = new Simulation();
 // Measured in TBC Anniversary 2.5.6 (docs/timing-design.md); prototype = the original dummy values.
 const PRESETS = {
-  measured: {interval: 2.29, wind: 0.36, gcd: 1.5, duration: 1.11, gcdStart: 'press'},
+  measured: {interval: 2.29, wind: 0.36, gcd: 1.5, duration: 1.11, breakEven: 1.3, gcdStart: 'press'},
   prototype: {interval: 2.8, wind: 0.5, gcd: 1, duration: 1.5, gcdStart: 'cast'}
 };
 let selectedHandle = 'cast';
@@ -54,6 +54,8 @@ function render(readouts = true) {
   cursor.style.transform = `translateX(${pendulum.cursor * 100}%)`;
   // Red delay of the last Auto Shot, one decimal, right of the bar.
   text('pendulumDelay', sim.delay >= 0.05 ? '+' + number(sim.delay, 1) : '');
+  // Yellow: an instant caused it and it stays below break-even; red otherwise.
+  $('pendulumDelay').classList.toggle('worth', !!sim.delayWorthIt);
   if (readouts) renderWindupStatus(sim);
   if (readouts) {
     const budget = actionBudget(sim);
@@ -154,7 +156,7 @@ for (const [id, kind] of [['castOffset', 'cast'], ['instantOffset', 'instant']])
   $(id).addEventListener('focus', () => selectHandle(kind));
 }
 function settings() {
-  for (const id of ['interval', 'wind', 'gcd', 'duration']) {
+  for (const id of ['interval', 'wind', 'gcd', 'duration', 'breakEven']) {
     sim.config[id] = Number($(id).value); $(id + 'Value').textContent = format(sim.config[id]);
   }
   sim.config.mode = $('mode').value;
@@ -262,7 +264,7 @@ function settings() {
   text('instantLabel', '10 skada direkt · ' + format(sim.config.gcd) + ' ny GCD');
   sim.reset(); render();
 }
-for (const id of ['interval', 'wind', 'gcd', 'duration', 'gcdStart', 'mode', 'queue', 'autoCast', 'castOffset', 'instantOffset', 'includeInstant', 'warmup']) {
+for (const id of ['interval', 'wind', 'gcd', 'duration', 'breakEven', 'gcdStart', 'mode', 'queue', 'autoCast', 'castOffset', 'instantOffset', 'includeInstant', 'warmup']) {
   $(id).addEventListener('input', () => {
     if (id === 'castOffset') selectedHandle = 'cast';
     if (id === 'instantOffset') selectedHandle = 'instant';
