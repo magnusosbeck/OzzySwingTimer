@@ -320,15 +320,8 @@ const castWindow=queueWindow({...measured,gcd:2,castOffset:.95,mode:'blocking',q
 assert.ok(Math.abs(pressWindow.duration-.36)<1e-6);assert.ok(Math.abs(castWindow.duration-.29)<1e-6);
 console.log('OK: GCD from press runs during wind-up, cast still starts at release; previews follow the setting');
 
-// Arcane Shot cooldown: pressed only when ready; skipped cycles are not conflicts.
-const arcane={interval:2.29,wind:.36,gcd:1.5,duration:1.11,gcdStart:'press',instantCooldown:6};
-const ac=run({...arcane,autoInstant:true,instantOffset:.6});ac.advance(30);
-assert.ok(ac.instants>=4&&ac.instants<=5,'instants '+ac.instants);assert.equal(ac.instantMisses,0);
-const manual=run(arcane);manual.advance(.5);assert.ok(manual.pressInstant());manual.advance(2);
-assert.equal(manual.pressInstant(),false);assert.equal(manual.instants,1);manual.advance(4.1);assert.ok(manual.pressInstant());
-const steadyOnly=schedulePreview({...arcane,castOffset:.95,instantOffset:.6,mode:'blocking',queue:true},false);
-assert.ok(steadyOnly.valid);
-const noCd=run({...arcane,instantCooldown:0,autoCast:true,castOffset:.95,autoInstant:true,instantOffset:.6});noCd.advance(30);
-const withCd=run({...arcane,autoCast:true,castOffset:.95,autoInstant:true,instantOffset:.6});withCd.advance(30);
-assert.ok(withCd.spells>noCd.spells,'cooldown frees GCD for Steady Shot');
-console.log('OK: Arcane Shot cooldown limits presses; Steady Shot fits every cycle with measured values');
+// Steady Shot + instant per cycle with measured values: 2 × 1.5 s GCD cannot fit in 2.29 s.
+const measuredPair={interval:2.29,wind:.36,gcd:1.5,duration:1.11,gcdStart:'press',mode:'blocking',queue:true};
+assert.ok(schedulePreview({...measuredPair,castOffset:.95,instantOffset:.62},false).valid);
+assert.equal(schedulePreview({...measuredPair,castOffset:.95,instantOffset:.62},true).valid,false);
+console.log('OK: Steady Shot alone fits every cycle; Steady + instant conflicts via GCD with measured values');

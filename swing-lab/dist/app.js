@@ -18,8 +18,8 @@ function text(id, value) {
 const sim = new Simulation();
 // Measured in TBC Anniversary 2.5.6 (docs/timing-design.md); prototype = the original dummy values.
 const PRESETS = {
-  measured: {interval: 2.29, wind: 0.36, gcd: 1.5, duration: 1.11, instantCooldown: 6, gcdStart: 'press'},
-  prototype: {interval: 2.8, wind: 0.5, gcd: 1, duration: 1.5, instantCooldown: 0, gcdStart: 'cast'}
+  measured: {interval: 2.29, wind: 0.36, gcd: 1.5, duration: 1.11, gcdStart: 'press'},
+  prototype: {interval: 2.8, wind: 0.5, gcd: 1, duration: 1.5, gcdStart: 'cast'}
 };
 let selectedHandle = 'cast';
 const number = (n, digits = 2) => n.toFixed(digits).replace('.', ',');
@@ -164,7 +164,7 @@ for (const [id, kind] of [['castOffset', 'cast'], ['instantOffset', 'instant']])
   $(id).addEventListener('focus', () => selectHandle(kind));
 }
 function settings() {
-  for (const id of ['interval', 'wind', 'gcd', 'duration', 'instantCooldown']) {
+  for (const id of ['interval', 'wind', 'gcd', 'duration']) {
     sim.config[id] = Number($(id).value); $(id + 'Value').textContent = format(sim.config[id]);
   }
   sim.config.mode = $('mode').value;
@@ -269,11 +269,10 @@ function settings() {
       (issue.carry ? ' från föregående cykel' : '') + ' har ' + format(issue.remaining, 3) +
       ' kvar vid försöket.').join(' ') + ' Flytta knopparna manuellt; inga försök flyttas eller köas om automatiskt.');
   $('castLabel').textContent = 'Cast time ' + format(sim.config.duration);
-  text('instantLabel', '10 skada direkt · ' + format(sim.config.gcd) + ' ny GCD' +
-    (sim.config.instantCooldown ? ' · ' + format(sim.config.instantCooldown) + ' cooldown' : ''));
+  text('instantLabel', '10 skada direkt · ' + format(sim.config.gcd) + ' ny GCD');
   sim.reset(); render();
 }
-for (const id of ['interval', 'wind', 'gcd', 'duration', 'instantCooldown', 'gcdStart', 'mode', 'queue', 'autoCast', 'castOffset', 'instantOffset', 'includeInstant', 'warmup']) {
+for (const id of ['interval', 'wind', 'gcd', 'duration', 'gcdStart', 'mode', 'queue', 'autoCast', 'castOffset', 'instantOffset', 'includeInstant', 'warmup']) {
   $(id).addEventListener('input', () => {
     if (id === 'castOffset') selectedHandle = 'cast';
     if (id === 'instantOffset') selectedHandle = 'instant';

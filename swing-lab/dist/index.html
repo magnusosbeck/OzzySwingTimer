@@ -73,8 +73,7 @@
 <p class="hint">Uppmätt: en cast som köas under wind-up startar vid skottet, men dess GCD löper redan från trycket.</p>
 <label>Steady Shot cast <output id="durationValue"></output><input id="duration" type="range" min="0.5" max="3" step="0.01" value="1.11"></label>
 <p class="hint">Steady Shots casttid med din ranged haste (grund 1,5 s).</p>
-<label>Arcane Shot cooldown <output id="instantCooldownValue"></output><input id="instantCooldown" type="range" min="0" max="10" step="0.5" value="6"></label>
-<p class="hint">Arcane Shot i TBC: ingen casttid, 6 s cooldown och 1,5 s GCD. Automatiken trycker bara när den är redo.</p>
+<p class="hint">Arcane Shot står för valfri instant (Arcane Shot, Multi-Shot …): ingen casttid och 1,5 s GCD. Egna cooldowns modelleras inte; det intressanta är hur Steady Shot och instanten påverkar varandra via GCD.</p>
 <label>Uppspelningshastighet<select id="speed"><option value="0.25">0,25× · detaljstudie</option><option value="0.5">0,5× · långsamt</option><option value="1" selected>1× · normal</option><option value="2">2× · snabbt</option><option value="5">5× · mycket snabbt</option></select></label>
 <p class="hint">Hastigheten ändrar bara hur fort simulerad tid går. DPS räknas per simulerad sekund.</p>
 <label class="check"><input id="warmup" type="checkbox" checked> Uppvärmning · hoppa över 10 Auto Shots</label>
