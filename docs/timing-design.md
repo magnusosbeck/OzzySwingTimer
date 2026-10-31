@@ -48,7 +48,10 @@ Förmågan behöver inte ha samma mekanik i TBC Classic och Forever.
 Mätt med addonens diagnostik (`/ozs debug on`) mot Azaloth, som inte slår tillbaka.
 Klient 2.5.6 build 70577, latens 58–82 ms, SpellQueueWindow 400 ms, 200 FPS.
 Tidpunkterna är klientens `GetTime()` när händelsen tas emot, inte serverns tid.
-Steady Shot-makrot innehöll även Kill Command (misslyckades utan pet; påverkar inte resultaten).
+Spelaren trycker inte förmågorna direkt utan via makron. Varje makro innehåller även
+pet-kommandon som pet attack och Kill Command. De räknas som instants utan GCD-påverkan
+och bör inte påverka resultaten. Under testerna fanns ingen pet ute ("You do not have a pet").
+Makrots Kill Command-fel ger dock en användbar tidsstämpel för själva knapptrycket.
 
 **Händelser.** Auto Shots wind-up-start kommer bara som `SPELL_CAST_START` i stridsloggen,
 avfyrningen som `UNIT_SPELLCAST_SUCCEEDED` (spell 75). `GetSpellCooldown(61304)` rapporterade
