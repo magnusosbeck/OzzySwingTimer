@@ -8,6 +8,9 @@ local EPS = 0.0001
 Model.MIN_SHOT_GAP = 0.5
 -- Shot-to-shot jitter without clipping was about ±0.1 s in TBC 2.5.6; smaller delays are noise.
 Model.DELAY_THRESHOLD = 0.15
+-- Observed: a Steady Shot pressed up to 0.16 s before the reported wind-up start was still queued to
+-- the shot (the report arrives after latency). Presses within SpellQueueWindow (400 ms) count as queued.
+Model.PRESS_LEAD = 0.4
 local min, max = math.min, math.max
 local function clamp(value, low, high) return max(low, min(high, value)) end
 
@@ -114,12 +117,12 @@ end
 
 -- Wind-up says "press now" when everything started before it (cast, GCD) ends by the shot.
 -- Otherwise the player is out of phase and should let one Auto Shot pass untouched.
--- A press during this wind-up starts a new GCD; that one must not turn the bar red.
+-- A press during or just before this wind-up starts a new GCD; that one must not turn the bar red.
 function Model:InPhase(moving)
     if not self.gcdKnown or moving or not self.windStart then return false end
     local ready = 0
     for _, lock in ipairs(self.locks) do
-        if lock.start < self.windStart - EPS then ready = max(ready, lock.finish) end
+        if lock.start < self.windStart - Model.PRESS_LEAD then ready = max(ready, lock.finish) end
     end
     return ready <= self.windEnd + EPS
 end

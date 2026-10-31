@@ -1,4 +1,4 @@
-# Ozzy Swing Timer – TBC Classic 0.4.1
+# Ozzy Swing Timer – TBC Classic 0.4.2
 
 Första spelbara prototypen för **TBC Classic Anniversary 2.5.6**, Interface 20506.
 Själva addonmappen kräver inga bibliotek eller andra addons.
@@ -65,6 +65,8 @@ wind-up hålls av klienten och skickas och startar exakt när Auto Shot avfyras.
 Skottet avbryts inte, och GCD börjar vid trycket. Wind-up är grön när allt som
 startade före wind-up (cast, GCD) är klart senast vid skottet. Ett tryck under en
 GCD som hänger kvar över wind-up gav i ett mätfall en omstartad wind-up (0,95 s clipping).
+Ett tryck upp till 0,4 s (SpellQueueWindow) före rapporterad wind-up räknas som köat och
+ger inte rött: i mätningen köades Steady tryckt 0,03–0,16 s före wind-up till skottet.
 
 GCD blockerar inte Auto Shot i modellen. Casts, rörelse och rapporterade misslyckade
 skott hanteras separat. Om inget skott rapporteras startar ingen påhittad ny cykel.
