@@ -109,7 +109,7 @@ function object:Hide() self.shown = false end
 for _, name in ipairs({"SetColorTexture", "SetWidth", "SetHeight", "SetFrameStrata", "SetClampedToScreen",
     "SetMovable", "RegisterForDrag", "StartMoving", "StopMovingOrSizing", "ClearAllPoints", "SetAllPoints",
     "SetFrameLevel", "SetSize", "SetScale", "EnableMouse", "SetClipsChildren", "SetRotation", "SetAlpha", "RegisterEvent",
-    "SetJustifyH", "SetTextColor"}) do
+    "SetJustifyH", "SetTextColor", "SetTexture", "SetVertexColor", "SetBlendMode", "SetFont"}) do
     object[name] = function() end
 end
 UIParent = newObject()
