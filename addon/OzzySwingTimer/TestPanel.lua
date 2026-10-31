@@ -21,6 +21,8 @@ local STEPS = {
         text = "Tryck Aimed Shot 2-3 gånger. Låt Auto Shot gå emellan."},
     {note = "rörelse", label = "8 Rörelse", short = "Ett steg under wind-up.",
         text = "Ta ett steg under wind-up några gånger."},
+    {note = "skada", label = "9 Skada", short = "Vanlig fight: Steady + Arcane.",
+        text = "Slåss mot ett vanligt monster med Auto Shot, Steady Shot och Arcane Shot. Petens skada loggas inte."},
 }
 local WIDTH, PAD, GAP, BUTTON_H = 280, 8, 8, 22
 local HALF = (WIDTH - 2 * PAD - GAP) / 2

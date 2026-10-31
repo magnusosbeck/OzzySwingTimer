@@ -1,4 +1,4 @@
-# Ozzy Swing Timer – TBC Classic 0.4.2
+# Ozzy Swing Timer – TBC Classic 0.5.0
 
 Första spelbara prototypen för **TBC Classic Anniversary 2.5.6**, Interface 20506.
 Själva addonmappen kräver inga bibliotek eller andra addons.
@@ -37,13 +37,14 @@ Baren har en enda siffra, den röda förskjutningen till höger:
 | `/ozs windup auto` | Uppskatta wind-up och lär från observerad skottstart |
 | `/ozs windup 0.5` | Manuell wind-up i sekunder, vid kalibrering |
 | `/ozs debug on` / `off` | Starta en ny logg med de senaste 1000 timinghändelserna / stäng av |
-| `/ozs panel` | Visa/dölj testpanelen: åtta tester med kort beskrivning, ny logg, spara, testläge, flytta/lås och status |
+| `/ozs panel` | Visa/dölj testpanelen: nio tester med kort beskrivning, ny logg, spara, testläge, flytta/lås och status |
 | `/ozs mark <text>` | Lägg en markering i loggen, t.ex. `/ozs mark steady tidigt` |
 | `/ozs reset` | Återställ storlek, position och automatisk wind-up |
 
 Diagnostiken sparas när du loggar ut eller kör `/reload`, i klientens
 `WTF/Account/<konto>/SavedVariables/OzzySwingTimer.lua`.
-Den innehåller timing och spell-ID, inga målnamn eller chattmeddelanden.
+Den innehåller timing, spell-ID och din egen skada per träff (belopp, crit), inga målnamn
+eller chattmeddelanden. Petens skada och missar/immunitet loggas inte.
 
 ## Vad som är observerat och uppskattat
 

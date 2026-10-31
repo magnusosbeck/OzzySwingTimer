@@ -230,4 +230,25 @@ test("delay is painted red right of the bar with a decimal comma", function()
     ns.display:Paint({phase = "cooldown", fill = 0.5, cursor = 0.5, segments = {}})
     assert(not ns.display.delay.shown)
 end)
+test("damage log keeps only the player's own hits", function()
+    SlashCmdList.OZZYSWINGTIMER("debug on")
+    local hit
+    CombatLogGetCurrentEventInfo = function() return table.unpack(hit) end
+    local function cleu(...) hit = {...}; event("COMBAT_LOG_EVENT_UNFILTERED") end
+    local function args(sub, src, spell, amount, absorbed, crit)
+        return 0, sub, false, src, "", 0, 0, "target", "", 0, 0, spell, "", 1, amount, 0, 1, 0, 0, absorbed, crit
+    end
+    cleu(args("RANGE_DAMAGE", "player-guid", 75, 580, 0, nil))
+    cleu(args("SPELL_DAMAGE", "player-guid", 34120, 1170, 0, true))
+    cleu(args("SPELL_DAMAGE", "pet-guid", 34026, 900, 0, nil))
+    cleu(args("SPELL_MISSED", "player-guid", 27019, "IMMUNE", 0, nil))
+    local damage = {}
+    for _, entry in ipairs(OzzySwingTimerDB.events) do
+        if entry.event == "DAMAGE" then damage[#damage + 1] = entry end
+    end
+    assert(#damage == 2, #damage)
+    assert(damage[1].spellID == 75 and damage[1].amount == 580 and not damage[1].crit)
+    assert(damage[2].spellID == 34120 and damage[2].amount == 1170 and damage[2].crit)
+    SlashCmdList.OZZYSWINGTIMER("debug off"); CombatLogGetCurrentEventInfo = nil
+end)
 print(string.format("%d tests passed", passed))

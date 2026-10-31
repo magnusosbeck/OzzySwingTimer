@@ -278,14 +278,23 @@ driver:SetScript("OnEvent", function(_, event, ...)
     elseif event == "UNIT_RANGEDDAMAGE" or event == "UNIT_ATTACK_SPEED" or event == "UNIT_AURA" then
         if ... == "player" then refreshSpeed(now) end
     elseif event == "COMBAT_LOG_EVENT_UNFILTERED" then
-        local _, subevent, _, source, _, _, _, _, _, _, _, spellID, _, _, reason = CombatLogGetCurrentEventInfo()
+        -- Position 15 is the failure reason for SPELL_CAST_FAILED and the amount for damage events.
+        local _, subevent, _, source, _, _, _, _, _, _, _, spellID, _, _, arg15, _, _, _, _, absorbed, critical =
+            CombatLogGetCurrentEventInfo()
+        -- Only the player's own GUID: pet damage has its own source and is never logged.
         if source ~= UnitGUID("player") then return end
         if spellID == AUTO then
             if subevent == "SPELL_CAST_START" then windStart(now, "combatlog")
             elseif subevent == "SPELL_CAST_SUCCESS" then shot(now, "combatlog") end
         end
         -- The failure reason (e.g. not yet recovered) is only available in the combat log.
-        if subevent == "SPELL_CAST_FAILED" then log("CLEU_FAILED", spellID, {reason = reason}) end
+        if subevent == "SPELL_CAST_FAILED" then log("CLEU_FAILED", spellID, {reason = arg15}) end
+        -- Damage per hit for break-even analysis: Auto Shot is RANGE_DAMAGE, abilities SPELL_DAMAGE.
+        -- Multi-Shot logs one entry per target hit. Misses and immunities are not damage events.
+        if (subevent == "RANGE_DAMAGE" or subevent == "SPELL_DAMAGE") and number(arg15) then
+            log("DAMAGE", spellID, {amount = arg15, crit = critical and true or nil,
+                absorbed = number(absorbed) and absorbed > 0 and absorbed or nil})
+        end
     else
         local unit, _, arg3, arg4 = ...
         if unit ~= "player" then return end
