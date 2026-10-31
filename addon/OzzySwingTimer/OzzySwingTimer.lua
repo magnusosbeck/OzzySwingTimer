@@ -1,7 +1,11 @@
 local addonName, ns = ...
 local AUTO, GCD = 75, 61304
+-- 61304 reports no cooldown in TBC 2.5.6. Spells without a cooldown of their own show exactly the GCD:
+-- Steady Shot, Hunter's Mark and Serpent Sting (rank 1 stays known).
+local GCD_REFERENCES = {34120, 1130, 1978}
+local gcdSpell = GCD
 local driver = CreateFrame("Frame")
-local model, display, settings, demo, lastView, lastViewAt
+local model, display, settings, demo, lastView
 local learned, weaponID, nextPoll, nextSpeed = nil, nil, 0, 0
 local samples = {}
 local SAMPLES, LOG_LIMIT = 9, 1000
@@ -31,7 +35,16 @@ local function logSession()
     end
     if GetCVar then extra.spellQueueWindow = GetCVar("SpellQueueWindow") end
     if GetFramerate then extra.fps = GetFramerate() end
+    extra.gcdSpell = gcdSpell
     log("SESSION", nil, extra)
+end
+local function pickGCDSpell()
+    gcdSpell = GCD
+    local known = IsPlayerSpell or IsSpellKnown
+    if not known then return end
+    for _, spellID in ipairs(GCD_REFERENCES) do
+        if known(spellID) then gcdSpell = spellID; return end
+    end
 end
 
 -- Median of recent wind-up observations, normalized by weapon speed; one noisy shot cannot move the bar.
@@ -71,21 +84,23 @@ end
 local function readGCD(now)
     local start, duration, rate
     if C_Spell and C_Spell.GetSpellCooldown then
-        local ok, info = pcall(C_Spell.GetSpellCooldown, GCD)
+        local ok, info = pcall(C_Spell.GetSpellCooldown, gcdSpell)
         if ok and type(info) == "table" then
             start, duration, rate = info.startTime, info.duration, info.modRate
         end
     end
     if not number(start) and GetSpellCooldown then
-        local ok, a, b, _, r = pcall(GetSpellCooldown, GCD)
+        local ok, a, b, _, r = pcall(GetSpellCooldown, gcdSpell)
         if ok then start, duration, rate = a, b, r end
     end
     local known = number(start) and number(duration)
     if known and number(rate) and rate > 0 then duration = duration / rate end
+    -- Anything longer than a GCD is not one.
+    if known and duration > 1.6 then start, duration = 0, 0 end
     local before = model.gcdStart
     model:SetGCD(start, duration, now, known)
     if model.gcdStart > 0 and model.gcdStart ~= before then
-        log("GCD", GCD, {gcdStart = model.gcdStart, gcdDuration = model.gcdEnd - model.gcdStart})
+        log("GCD", gcdSpell, {gcdStart = model.gcdStart, gcdDuration = model.gcdEnd - model.gcdStart})
     end
 end
 
@@ -118,7 +133,10 @@ local function windStart(now, source)
     log("AUTO_START", AUTO, {source = source})
 end
 local function shot(now, source)
-    if model.lastShot and now - model.lastShot < 0.08 then return end
+    if model.lastShot and now - model.lastShot < ns.Model.MIN_SHOT_GAP then
+        log("AUTO_DUPLICATE", AUTO, {source = source, sinceLastShot = now - model.lastShot})
+        return
+    end
     local measured
     if model.observedWindStart then
         local duration = now - model.observedWindStart
@@ -193,7 +211,8 @@ local function command(message)
         local version, build = GetBuildInfo()
         say(string.format("Klient %s (%s). Fas: %s. Skott: %d. Speed %.3f, wind-up %.3f.",
             version, build, model.phase, model.shots, model.speed, model.wind))
-        say("Wind-up: " .. (ns.windSource or "okänd") .. ". GCD-API: " .. (model.gcdKnown and "tillgängligt" or "okänt"))
+        say("Wind-up: " .. (ns.windSource or "okänd") .. ". GCD läses från spell " .. gcdSpell ..
+            ": " .. (model.gcdKnown and "tillgängligt" or "okänt"))
     else
         say("/ozs test · panel · unlock · lock · size 300 20 · scale 1 · status · debug on/off · mark <text> · windup auto/0.5 · reset")
     end
@@ -216,7 +235,7 @@ local function initialize()
     SLASH_OZZYSWINGTIMER1 = "/ozs"
     local _, class = UnitClass("player")
     ns.isHunter = class == "HUNTER"
-    refreshSpeed(GetTime()); readGCD(GetTime())
+    pickGCDSpell(); refreshSpeed(GetTime()); readGCD(GetTime())
     say("Laddad. /ozs test visar baren, /ozs unlock flyttar den, /ozs lock låser.")
     if not ns.isHunter then say("Skottspårningen kräver en hunter. Testläget fungerar ändå.") end
     driver:SetScript("OnUpdate", function()
@@ -232,7 +251,7 @@ local function initialize()
         else
             local isMoving = moving()
             model:Advance(now, isMoving)
-            lastView, lastViewAt = model:View(now, isMoving), now
+            lastView = model:View(now, isMoving)
             display:Paint(lastView, now, model)
         end
     end)
@@ -252,7 +271,8 @@ driver:SetScript("OnEvent", function(_, event, ...)
         model:Stop()
         log(event == "STOP_AUTOREPEAT_SPELL" and "AUTOREPEAT_OFF" or event, AUTO)
     elseif event == "PLAYER_ENTERING_WORLD" then
-        refreshSpeed(now); readCast(now); readGCD(now); logSession()
+        pickGCDSpell(); refreshSpeed(now); readCast(now); readGCD(now); logSession()
+    elseif event == "SPELLS_CHANGED" then pickGCDSpell()
     elseif event == "SPELL_UPDATE_COOLDOWN" then readGCD(now)
     elseif event == "PLAYER_EQUIPMENT_CHANGED" then learned = nil; refreshSpeed(now); model:Stop()
     elseif event == "UNIT_RANGEDDAMAGE" or event == "UNIT_ATTACK_SPEED" or event == "UNIT_AURA" then
@@ -267,31 +287,29 @@ driver:SetScript("OnEvent", function(_, event, ...)
         -- The failure reason (e.g. not yet recovered) is only available in the combat log.
         if subevent == "SPELL_CAST_FAILED" then log("CLEU_FAILED", spellID, {reason = reason}) end
     else
-        local unit, arg2, arg3, arg4 = ...
+        local unit, _, arg3, arg4 = ...
         if unit ~= "player" then return end
-        local guid, spellID = arg2, arg3
+        local spellID = arg3
         if event == "UNIT_SPELLCAST_SENT" then
-            guid, spellID = arg3, arg4
+            spellID = arg4
             if spellID and spellID ~= AUTO then
-                local duration = castTime(spellID)
-                local window = model:QueueWindow(now, moving())
-                -- SENT can arrive after the client has already applied the new GCD.
-                local recent = lastView and lastView.window and lastView.window.open and
-                    lastViewAt and now - lastViewAt < 0.1 and now <= lastView.window.finish
-                local inWindow = (window and window.open) or recent or false
-                if duration > 0 then model:Sent(spellID, guid, now, inWindow) end
-                log("CAST_SENT", spellID, {castTime = duration / 1000, inWindow = inWindow,
+                log("CAST_SENT", spellID, {castTime = castTime(spellID) / 1000,
+                    sinceShot = model.lastShot and now - model.lastShot,
                     windProgress = model.phase == "wind" and lastView and lastView.fill or nil})
             end
         elseif event == "UNIT_SPELLCAST_START" or event == "UNIT_SPELLCAST_CHANNEL_START" then
             if spellID == AUTO then windStart(now, "unit")
-            else readCast(now); readGCD(now); model:Confirm(spellID, guid, now); log("CAST_START", spellID) end
+            else
+                readCast(now); readGCD(now)
+                local flashed = model:CastStarted(now)
+                log("CAST_START", spellID, {sinceShot = model.lastShot and now - model.lastShot, flashed = flashed})
+            end
         elseif event == "UNIT_SPELLCAST_SUCCEEDED" then
             if spellID == AUTO then shot(now, "unit")
             elseif spellID == 5384 then model:Stop()
-            else model:Confirm(spellID, guid, now); readGCD(now); log("CAST_SUCCESS", spellID) end
+            else readGCD(now); log("CAST_SUCCESS", spellID) end
         elseif event == "UNIT_SPELLCAST_FAILED" or event == "UNIT_SPELLCAST_FAILED_QUIET" or event == "UNIT_SPELLCAST_INTERRUPTED" then
-            if spellID == AUTO then model:AutoFailed(now) else model:Failed(spellID, guid) end
+            if spellID == AUTO then model:AutoFailed(now) end
             log(event, spellID)
         else readCast(now) end
     end
@@ -299,7 +317,7 @@ end)
 
 local events = {"ADDON_LOADED", "PLAYER_ENTERING_WORLD", "PLAYER_LEAVING_WORLD", "PLAYER_DEAD",
     "START_AUTOREPEAT_SPELL", "STOP_AUTOREPEAT_SPELL", "SPELL_UPDATE_COOLDOWN",
-    "PLAYER_EQUIPMENT_CHANGED", "UNIT_RANGEDDAMAGE", "UNIT_ATTACK_SPEED", "UNIT_AURA",
+    "PLAYER_EQUIPMENT_CHANGED", "SPELLS_CHANGED", "UNIT_RANGEDDAMAGE", "UNIT_ATTACK_SPEED", "UNIT_AURA",
     "COMBAT_LOG_EVENT_UNFILTERED", "UNIT_SPELLCAST_SENT", "UNIT_SPELLCAST_START",
     "UNIT_SPELLCAST_STOP", "UNIT_SPELLCAST_DELAYED", "UNIT_SPELLCAST_SUCCEEDED",
     "UNIT_SPELLCAST_FAILED", "UNIT_SPELLCAST_FAILED_QUIET", "UNIT_SPELLCAST_INTERRUPTED",

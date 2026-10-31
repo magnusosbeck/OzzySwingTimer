@@ -1,4 +1,4 @@
-# Ozzy Swing Timer – TBC Classic 0.1.2
+# Ozzy Swing Timer – TBC Classic 0.2.0
 
 Första spelbara prototypen för **TBC Classic Anniversary 2.5.6**, Interface 20506.
 Själva addonmappen kräver inga bibliotek eller andra addons.
@@ -24,7 +24,7 @@ Baren innehåller inga texter eller sekundvärden:
 - **Auto Shot wind-up:** snabb fyllning från vänster till höger. Röd före köfönstret, grön i fönstret.
 - **Turkos ram:** köfönstrets del av wind-up.
 - **Blå diagonal markering:** faktisk spell cast och GCD tillsammans. Överlapp räknas en gång; GCD som fortsätter in i nästa cykel visas där också.
-- **Grön flash:** ett castförsök i köfönstret följt av nästa Auto Shot och en bekräftad caststart. Ett skickat eller misslyckat försök räcker inte.
+- **Grön flash:** en cast som startar i samma ögonblick som Auto Shot avfyras, det vill säga ett tryck som köades under wind-up. En gång per skott.
 
 ## Kommandon
 
@@ -49,21 +49,23 @@ Den innehåller timing och spell-ID, inga målnamn eller chattmeddelanden.
 
 Auto Shots avfyrning förankras i `UNIT_SPELLCAST_SUCCEEDED` för spell 75,
 med `SPELL_CAST_SUCCESS` som alternativ. Projektilens skadehändelse används inte.
-Vapenintervallet hämtas från `UnitRangedDamage`. Cast och GCD läses separat
-från klienten; simulatorns fasta GCD används inte.
+Vapenintervallet hämtas från `UnitRangedDamage`. Cast läses från `UnitCastingInfo`.
+GCD läses som cooldown på en känd spell utan egen cooldown (Steady Shot, annars
+Hunter's Mark eller Serpent Sting), eftersom GCD-spellen 61304 inte rapporterar
+något i TBC 2.5.6. Simulatorns fasta GCD används inte.
 
 Wind-up är en **prognos** tills klienten rapporterar en Auto Shot-caststart
 och motsvarande avfyrning. Första uppskattningen är 0,5 sekunder, justerad med
-`GetRangedHaste` om tillgängligt. Det kan avvika, exempelvis om en hastighetskälla
-inte ingår i det värdet. En observerad wind-up används sedan och skalas med vapentakten.
+`GetRangedHaste` om tillgängligt. Därefter används medianen av de senaste 9 uppmätta
+wind-ups, skalad med vapentakten. I TBC 2.5.6 har den uppmätts till cirka 0,36 s.
 Vapenbyte rensar inlärningen. `/ozs status` visar vilken källa som används.
 
-Köfönstret visar delen av wind-up efter aktuell cast/GCD. Det är vår **arbetsmodell**,
-inte ett bevis på när servern accepterar ett knapptryck. Addonen kan inte direkt läsa
-serverns spellkö. Flashen är därför en efterhandsbekräftelse genom händelsernas ordning.
-Om caststart sker före Auto Shots avfyrning väntar flashen på skottet.
-Klientens SpellQueueWindow/latens kan begränsa möjligheten att köa tidigare i den gröna zonen.
-En flash garanterar inte att rotationen var optimal eller fri från clipping.
+Observerat i TBC 2.5.6 (SpellQueueWindow 400 ms): en Steady Shot som trycks under
+wind-up hålls av klienten och skickas och startar exakt när Auto Shot avfyras.
+Skottet avbryts inte. Flashen bekräftar just det: casten startade högst 0,1 s efter
+avfyrningen. Köfönstret visar delen av wind-up efter aktuell cast/GCD; om ett tryck
+före GCD:s slut också köas är ännu inte testat. En flash garanterar inte att
+rotationen var optimal eller fri från clipping.
 
 GCD blockerar inte Auto Shot i modellen. Casts, rörelse och rapporterade misslyckade
 skott hanteras separat. Om inget skott rapporteras startar ingen påhittad ny cykel.
@@ -73,10 +75,10 @@ Inga spells kastas automatiskt av addonen.
 ## Verifiering
 
 Lua-modellen och händelsekopplingen testas med simulerade WoW-API:er i
-`addon/tests/run.lua`. **Inte ännu verifierad i en körande spelklient.**
-När du testar: kontrollera först ren Auto Shot, sedan Steady Shot under röd/grön fas,
-en sen instant-GCD, rörelse och en haste-buff. Kör `/ozs debug on` om timingen avviker.
-Exakt köbeteende och tidig GCD-start är fortsatt öppna frågor; Forever-portningen kommer senare.
+`addon/tests/run.lua`. Skott, vapenintervall, wind-up och köning av Steady Shot
+har mätts i spelklienten (se `docs/timing-design.md`). GCD-läsningen och den nya
+flash-regeln är ännu inte provade i spelet. Testprotokollet finns i `/ozs panel`.
+Forever-portningen kommer senare.
 
 API-underlag: [Blizzards genererade Spell-API för Anniversary](https://github.com/Gethe/wow-ui-source/blob/classic_anniversary/Interface/AddOns/Blizzard_APIDocumentationGenerated/SpellDocumentation.lua)
 och [cooldown-strukturen](https://github.com/Gethe/wow-ui-source/blob/classic_anniversary/Interface/AddOns/Blizzard_APIDocumentationGenerated/SpellSharedDocumentation.lua).

@@ -67,13 +67,23 @@ Första versionen innehåller pendelbaren, cast/GCD-markering, köfönster och g
 
 Skottens timing förankras i klientens rapporterade avfyrningar. Vapenintervallet läses från klienten, och casttid och GCD läses separat. Wind-up uppskattas först och kan sedan kalibreras från observerad skottstart och avfyrning. Addonen använder inte simulatorns fasta GCD-värde.
 
-**16 automatiserade tester passerar** för tidsmodellen och händelsekopplingen med simulerade WoW-API:er. Det verifierar kodens beteende under testförutsättningarna. Addonen är **ännu inte verifierad i en körande spelklient**.
+**20 automatiserade tester passerar** för tidsmodellen och händelsekopplingen med simulerade WoW-API:er.
+
+### Första mätningarna i spelet (0.1.1–0.2.0)
+
+Addonen har körts i TBC Anniversary med diagnostik och en testpanel (`/ozs panel`). Mätningarna finns i `docs/timing-design.md`. Kort sammanfattat:
+
+- Vapenintervallet från klienten stämmer med uppmätta skott.
+- Wind-up är cirka 0,36 s i median, inte 0,5 s, med brus på cirka ±0,1 s. Addonen lär sig nu medianen.
+- Steady Shot som trycks under wind-up köas av klienten och startar exakt när Auto Shot avfyras. Skottet avbryts inte.
+- Steady tryckt sent i den långsamma fasen kostar märkbart mer tid per cykel än Steady tryckt under wind-up.
+- GCD-spellen 61304 rapporterar inget i denna klient. Version 0.2.0 läser GCD från Steady Shot i stället och bygger flashen på den observerade köningen. Detta är ännu inte provat i spelet.
 
 ## Vad vi fortfarande behöver ta reda på
 
-- Vad händer när man trycker Steady Shot under Auto Shots wind-up? Köas casten till efter skottet, börjar GCD tidigare eller kan någon del faktiskt överlappa?
-- Hur stor del av vårt visuella köfönster accepterar klienten och servern i praktiken? Hur påverkar latens och SpellQueueWindow?
-- Vilka skottstartshändelser får vi pålitligt i den aktuella TBC-klienten, och hur väl kan wind-up mätas?
+- ~~Vad händer när man trycker Steady Shot under Auto Shots wind-up?~~ Casten köas till skottet (mätt i TBC 2.5.6). Kvar: börjar GCD tidigare än casten?
+- Köas ett tryck även när GCD fortfarande pågår i början av wind-up? Hur påverkar latens och ett mindre SpellQueueWindow?
+- ~~Vilka skottstartshändelser får vi pålitligt?~~ Start via stridsloggen, avfyrning via `UNIT_SPELLCAST_SUCCEEDED`; wind-up kan mätas med median.
 - Hur påverkas vapenintervall, wind-up, casttid och GCD av olika haste- och attack speed-effekter?
 - Kan en viss instantförmåga fördröja Auto Shot, och beror det då på GCD eller en separat regel för förmågan?
 - Vilka förmågor återställer eller påverkar swingtimern på andra sätt?
@@ -83,10 +93,10 @@ Arbetsmodellen låter GCD hindra nästa vanliga förmåga men inte Auto Shot i s
 
 ## Nästa steg
 
-1. Installera addonmappen i TBC Classic och kontrollera att den laddar och att baren går att placera.
-2. Testa enbart Auto Shot för att verifiera pendelns rytm och wind-up.
-3. Prova Steady Shot vid olika punkter i wind-up och jämför castbegäran, caststart, GCD och skottets avfyrning.
-4. Lägg till en instant, testa sen GCD över cykelgränsen och upprepa med rörelse och haste.
+1. ~~Installera addonen, testa ren Auto Shot och Steady Shot under wind-up.~~ Klart 2026-10-31.
+2. Prova 0.2.0 i spelet: syns GCD i baren och kommer den gröna flashen när Steady köas till skottet?
+3. Gör de tester som saknas: Steady i grön zon, rotation Steady + Arcane, Aimed Shot.
+4. Mät GCD-start och GCD-längd relativt det köade trycket, och upprepa med haste.
 5. Justera modellen efter observationerna och fortsätt iterera på gränssnittet.
 6. Anpassa och verifiera Forever-versionen när den kan testas.
 

@@ -4,6 +4,10 @@ Model.__index = Model
 ns.Model = Model
 
 local EPS = 0.0001
+-- Observed in TBC 2.5.6: a cast pressed during wind-up is held by the client and starts at the release.
+local QUEUED_TOLERANCE = 0.1
+-- No real Auto Shot follows another this fast; closer reports are duplicates.
+Model.MIN_SHOT_GAP = 0.5
 local min, max = math.min, math.max
 local function clamp(value, low, high) return max(low, min(high, value)) end
 
@@ -19,14 +23,14 @@ function Model:Reset()
     self.windStart, self.windEnd, self.observedWindStart = nil, nil, nil
     self.castStart, self.castEnd, self.castKey = 0, 0, nil
     self.gcdStart, self.gcdEnd, self.gcdKnown = 0, 0, false
-    self.locks, self.pending, self.shots = {}, nil, 0
-    self.flashSerial, self.flashAt = 0, nil
+    self.locks, self.shots = {}, 0
+    self.flashSerial, self.flashAt, self.flashShot = 0, nil, nil
     self.retryAt, self.waitingForShot = 0, false
 end
 
 function Model:Stop()
     self.active, self.phase = false, "idle"
-    self.pending, self.observedWindStart, self.waitingForShot = nil, nil, false
+    self.observedWindStart, self.waitingForShot = nil, false
 end
 
 function Model:SetTiming(speed, wind, now)
@@ -119,45 +123,23 @@ function Model:QueueWindow(now, moving)
         open = duration > EPS and now >= start - EPS and now < self.windEnd + EPS}
 end
 
-function Model:Sent(spellID, castGUID, now, eligible)
-    if not eligible or (self.pending and now < self.pending.expires) then return end
-    self.pending = {spellID = spellID, guid = castGUID, sent = now,
-        shots = self.shots, expires = now + 3}
-end
-
-function Model:MatchesPending(spellID, castGUID)
-    local pending = self.pending
-    return pending and pending.spellID == spellID and
-        (not pending.guid or not castGUID or pending.guid == castGUID)
-end
-
-function Model:Confirm(spellID, castGUID, now)
-    if not self:MatchesPending(spellID, castGUID) then return false end
-    local pending = self.pending
-    if now > pending.expires then self.pending = nil; return false end
-    pending.confirmed = true
-    if self.shots == pending.shots + 1 then
-        self.flashSerial, self.flashAt = self.flashSerial + 1, now
-        self.pending = nil
-        return true
+-- Flash once per shot when a cast starts at the release, i.e. it was queued during wind-up.
+function Model:CastStarted(now)
+    if not self.lastShot or now - self.lastShot > QUEUED_TOLERANCE or self.flashShot == self.shots then
+        return false
     end
-    return false
-end
-
-function Model:Failed(spellID, castGUID)
-    if self:MatchesPending(spellID, castGUID) then self.pending = nil end
+    self.flashShot = self.shots
+    self.flashSerial, self.flashAt = self.flashSerial + 1, now
+    return true
 end
 
 function Model:Shot(now)
-    if self.lastShot and now - self.lastShot < 0.08 then return false end
+    if self.lastShot and now - self.lastShot < Model.MIN_SHOT_GAP then return false end
     self.shots = self.shots + 1
     self.active, self.phase = true, "cooldown"
     self.lastShot, self.cooldownStart = now, now
     self.cooldownEnd = now + self.speed - self.wind
     self.observedWindStart, self.waitingForShot, self.retryAt = nil, false, 0
-    if self.pending and self.pending.confirmed then
-        self:Confirm(self.pending.spellID, self.pending.guid, now)
-    end
     return true
 end
 
@@ -171,7 +153,6 @@ function Model:AutoFailed(now)
 end
 
 function Model:Advance(now, moving)
-    if self.pending and now > self.pending.expires then self.pending = nil end
     if not self.active then return end
     if self.phase == "cooldown" and now >= self.cooldownEnd then
         if moving or self.castEnd > now + EPS or now < self.retryAt then

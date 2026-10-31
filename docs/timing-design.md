@@ -24,7 +24,9 @@ en cast eller GCD har börjat.
 
 ## Öppen fråga: vad händer vid ett tryck under uppdragningen?
 
-Status: **OBESVARAD för den faktiska TBC Classic-klienten och separat för Forever.**
+Status: **Delvis besvarad för TBC Anniversary 2.5.6: alternativ 1 stämmer med mätningen
+(se Mätresultat nedan). Om GCD börjar tidigare (alternativ 2) är inte mätt, eftersom GCD
+inte lästes under testet. Obesvarad för Forever.**
 
 Håll isär dessa alternativ:
 
@@ -40,6 +42,49 @@ Det kan även finnas avvisade knapptryck, begränsade köfönster och andra
 förmågespecifika beteenden. Alternativen är hypoteser, inte universella regler.
 Haste som ändrar kasttid ska skiljas från tidsvinst genom överlappning.
 Förmågan behöver inte ha samma mekanik i TBC Classic och Forever.
+
+## Mätresultat i TBC Anniversary 2.5.6, 2026-10-31
+
+Mätt med addonens diagnostik (`/ozs debug on`) mot Azaloth, som inte slår tillbaka.
+Klient 2.5.6 build 70577, latens 58–82 ms, SpellQueueWindow 400 ms, 200 FPS.
+Tidpunkterna är klientens `GetTime()` när händelsen tas emot, inte serverns tid.
+Steady Shot-makrot innehöll även Kill Command (misslyckades utan pet; påverkar inte resultaten).
+
+**Händelser.** Auto Shots wind-up-start kommer bara som `SPELL_CAST_START` i stridsloggen,
+avfyrningen som `UNIT_SPELLCAST_SUCCEEDED` (spell 75). `GetSpellCooldown(61304)` rapporterade
+aldrig någon GCD; addonen läser nu GCD från en känd spell utan egen cooldown.
+
+**Vapenintervall.** Medelintervall 2,31 s vid `UnitRangedDamage` 2,286 (9 skott) och 2,00 s
+vid 1,988 (5 skott, Quick Shots). Klientens värde kan användas direkt.
+
+**Wind-up.** Uppmätt start → avfyrning: median cirka 0,36–0,37 s i båda sessionerna,
+spridning 0,25–0,49 s. Värdena klumpar sig kring cirka 0,32 och 0,42 s, och skottintervallen
+hoppar med cirka ±0,08 s. Det tyder på att servern hanterar händelser i steg om cirka 0,1 s
+(hypotes). Enskilda mätningar är därför brusiga; använd median.
+
+**Tryck under wind-up (17 av 17 fall).** Steady Shot som trycks under wind-up skickas
+(`UNIT_SPELLCAST_SENT`) och startar i samma bildruta som Auto Shot avfyras. Skottet avbryts
+inte. Ibland rapporteras samtidigt "Another action is in progress" för Auto Shot, men
+skottet går ändå. Steady Shot-casten tog cirka 1,15 s med denna haste.
+
+**Kostnad per cykel** (medelintervall, jämfört med 2,31 s för ren Auto Shot):
+
+| Fall | Medelintervall |
+| --- | --- |
+| Steady tryckt under wind-up | 2,35–2,40 s |
+| Steady tryckt i långsam fas (0,2–1,3 s efter skott) | 2,52 s |
+| Arcane Shot i långsam fas (5 tryck på 13 cykler) | 2,41 s |
+
+En Steady Shot som startar vid skottet hinner bli klar före nästa wind-up. En sen Steady
+fortsätter in i nästa wind-up och fördröjer skottet, som modellen förutsäger.
+Under och efter en cast försöker Auto Shot igen ungefär var 0,5 s (`UNIT_SPELLCAST_FAILED_QUIET`),
+vilket kan lägga till fördröjning efter castens slut. Arcane Shots effekt är för lite data.
+
+**Rörelse.** Steg under cast eller wind-up gav "Interrupted" för både Steady Shot och Auto Shot.
+
+**Inte mätt än:** Steady i den gröna zonen jämfört med den röda, rotation Steady + Arcane,
+Aimed Shot (en tidigare logg visade cirka 2,2 s till nästa skottstart efter Aimed Shot),
+GCD-längd och GCD-start relativt köat tryck.
 
 ## Konsekvens för färgmarkering i simulatorn
 
