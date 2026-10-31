@@ -4,7 +4,7 @@ const EPS = 1e-8;
 export class Simulation {
   constructor(config = {}) {
     // gcdStart 'press': a cast queued in wind-up starts its GCD at the press (measured in TBC 2.5.6).
-    this.config = {interval: 2.8, wind: 0.5, duration: 1.5, gcd: 1, gcdStart: 'cast', mode: 'blocking', queue: true,
+    this.config = {interval: 2.8, wind: 0.5, duration: 1.5, gcd: 1, gcdStart: 'cast', instantCooldown: 0, mode: 'blocking', queue: true,
       autoCast: false, castOffset: 0, autoInstant: false, instantOffset: .6, warmup: false, ...config};
     this.reset();
   }
@@ -13,7 +13,7 @@ export class Simulation {
       progress: 0, castLeft: 0, gcdLeft: 0, gcdSource: null, gcdShot: null, queued: false, shots: 0, spells: 0, instants: 0,
       delay: null, totalDelay: 0, expected: this.config.wind, lastRelease: null, dpsSample: null,
       castFinishedAt: null, measurementStart: null, actionLocks: [], queueAcceptCount: 0,
-      autoAttempted: false, instantAttempted: false, autoMisses: 0, instantMisses: 0,
+      autoAttempted: false, instantAttempted: false, instantReadyAt: 0, autoMisses: 0, instantMisses: 0,
       events: [], eventVersion: (this.eventVersion ?? 0) + 1,
       message: 'Starta simuleringen. Första Auto Shot börjar med en uppdragning.'});
   }
@@ -48,8 +48,8 @@ export class Simulation {
     // A queued press may already have started its GCD.
     if (!(fromQueue && this.config.gcdStart === 'press')) this.startGcd();
     this.recordActionLock('cast', Math.max(this.config.duration, this.gcdLeft));
-    this.log('Spellens cast startar');
-    this.message = 'Spellens cast pågår.';
+    this.log('Steady Shot startar');
+    this.message = 'Steady Shot pågår.';
   }
   reportBlockedAttempt(kind, windOnly = false) {
     // Optional diagnostics for previews; never reschedules or changes an attempt.
@@ -85,19 +85,22 @@ export class Simulation {
     this.startCast();
     return true;
   }
+  instantOnCooldown() { return this.t + EPS < this.instantReadyAt; }
   pressInstant() {
     if (!this.running) { this.message = 'Starta eller fortsätt simuleringen först.'; return false; }
+    if (this.instantOnCooldown()) { this.message = 'Arcane Shot har cooldown.'; return false; }
     if (this.castLeft > EPS || this.gcdLeft > EPS || this.queued) {
       this.reportBlockedAttempt('instant');
-      this.message = 'InstaCast avvisad: cast, kö eller GCD är inte klar.'; return false;
+      this.message = 'Arcane Shot avvisad: cast, kö eller GCD är inte klar.'; return false;
     }
     this.instants++;
+    this.instantReadyAt = this.t + this.config.instantCooldown;
     this.gcdLeft = this.config.gcd;
     this.gcdSource = 'instant';
     this.gcdShot = this.shots;
     this.recordActionLock('instant', this.config.gcd);
-    this.log('InstaCast träffar · 10 skada · Ny GCD');
-    this.message = 'InstaCast träffar direkt och startar en ny GCD.';
+    this.log('Arcane Shot träffar · 10 skada · Ny GCD');
+    this.message = 'Arcane Shot träffar direkt och startar en ny GCD.';
     return true;
   }
   toggleMove() {
@@ -129,8 +132,10 @@ export class Simulation {
     const instantTarget = this.lastRelease + this.config.instantOffset * this.config.interval;
     if (this.config.autoInstant && !this.instantAttempted && this.t + EPS >= instantTarget) {
       this.instantAttempted = true;
+      // Like the game: the instant is only pressed when its own cooldown is ready.
+      if (this.instantOnCooldown()) return;
       if (!this.pressInstant()) {
-        this.autoMisses++; this.instantMisses++; this.log('Automatisk InstaCast avvisad');
+        this.autoMisses++; this.instantMisses++; this.log('Automatisk Arcane Shot avvisad');
       }
     }
   }

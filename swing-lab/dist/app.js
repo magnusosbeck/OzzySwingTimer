@@ -18,8 +18,8 @@ function text(id, value) {
 const sim = new Simulation();
 // Measured in TBC Anniversary 2.5.6 (docs/timing-design.md); prototype = the original dummy values.
 const PRESETS = {
-  measured: {interval: 2.29, wind: 0.36, gcd: 1.5, duration: 1.11, gcdStart: 'press'},
-  prototype: {interval: 2.8, wind: 0.5, gcd: 1, duration: 1.5, gcdStart: 'cast'}
+  measured: {interval: 2.29, wind: 0.36, gcd: 1.5, duration: 1.11, instantCooldown: 6, gcdStart: 'press'},
+  prototype: {interval: 2.8, wind: 0.5, gcd: 1, duration: 1.5, instantCooldown: 0, gcdStart: 'cast'}
 };
 let selectedHandle = 'cast';
 const number = (n, digits = 2) => n.toFixed(digits).replace('.', ',');
@@ -28,7 +28,7 @@ const rows = [
   ['cycle', 'Auto Shot cycle', '#b9d597', 'Weapon cooldown och Auto Shot wind-up bildar hela cykeln.'],
   ['cooldown', 'Weapon cooldown', '#c1ed85', 'Rörelse är möjlig. En blockerande cast måste hinna bli klar.'],
   ['wind', 'Auto Shot wind-up', '#edbd70', 'Stå still. Auto Shot avfyras när den här mätaren fyllts.'],
-  ['spell', 'Spell cast', '#91b9ee', 'Castspellens casttid, separat från Auto Shot och Global cooldown.'],
+  ['spell', 'Steady Shot cast', '#91b9ee', 'Steady Shots casttid, separat från Auto Shot och Global cooldown.'],
   ['gcd', 'Global cooldown', '#b69bd9', 'En egen timer för när nästa spell kan påbörjas.']
 ];
 $('timers').innerHTML = rows.map(([id, title, color, hint]) => `<div class="timer" style="--color:${color}"><div class="timerHead"><span id="${id}Title">${title}</span><span id="${id}Text">—</span></div><div class="track" role="progressbar" aria-label="${title}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="${id}Track"><div id="${id}Fill" class="fill"></div></div><small>${hint}</small></div>`).join('');
@@ -75,14 +75,14 @@ function render(readouts = true) {
         region.className = 'pendulum-lock-region';
         region.style.left = segment.left * 100 + '%';
         region.style.width = segment.width * 100 + '%';
-        region.title = (segment.kind === 'cast' ? 'Spell cast + GCD' : 'InstaCast + GCD') + ' · ' + format(segment.duration);
+        region.title = (segment.kind === 'cast' ? 'Steady Shot cast + GCD' : 'Arcane Shot + GCD') + ' · ' + format(segment.duration);
         return region;
       }));
     }
     text('hudLockTime', format(budget.busy));
     text('hudFreeTime', budget.assess ? format(budget.free) : '—');
     text('hudFitCast', 'Cast + GCD · ' + (budget.assess ? budget.fitsCast ? 'Ryms' : 'Ryms inte' : '—'));
-    text('hudFitInstant', 'InstaCast + GCD · ' + (budget.assess ? budget.fitsInstant ? 'Ryms' : 'Ryms inte' : '—'));
+    text('hudFitInstant', 'Arcane Shot + GCD · ' + (budget.assess ? budget.fitsInstant ? 'Ryms' : 'Ryms inte' : '—'));
     $('hudFitCast').classList.toggle('fits', budget.fitsCast);
     $('hudFitInstant').classList.toggle('fits', budget.fitsInstant);
     text('hudBudgetNote', sim.queued ? 'Spell köad — Action lock börjar vid nästa avfyrning.' :
@@ -112,7 +112,7 @@ function render(readouts = true) {
     sim.castLeft ? format(sim.castLeft) : sim.queued ? 'Köad' : 'Ingen cast');
   bar('gcd', sim.gcdLeft ? 1 - sim.gcdLeft / c.gcd : 0, sim.gcdLeft ? format(sim.gcdLeft) : 'Redo');
   if (!readouts) return;
-  text('gcdTitle', 'Global cooldown' + (sim.gcdLeft && sim.gcdSource === 'instant' ? ' · InstaCast' : '') + ' · ' + format(c.gcd));
+  text('gcdTitle', 'Global cooldown' + (sim.gcdLeft && sim.gcdSource === 'instant' ? ' · Arcane Shot' : '') + ' · ' + format(c.gcd));
   $('gcdFill').style.background = sim.gcdSource === 'instant' ? '#f0a35a' : '#b69bd9';
   text('clock', format(sim.t));
   text('status', sim.running ? 'Körs' : 'Pausad');
@@ -136,12 +136,12 @@ function render(readouts = true) {
     number(sample.baseline) + ' DPS · Din skada: ' + number(sample.ratio) + '× referensen.' :
     sim.config.warmup ? 'DPS visas efter 10 Auto Shots och en hel mätcykel.' :
       'DPS visas efter första hela skottcykeln och uppdateras vid varje avslutad cykel.');
-  text('attempts', sim.autoMisses + ' avvisade · ' + sim.instantMisses + ' InstaCast');
+  text('attempts', sim.autoMisses + ' avvisade · ' + sim.instantMisses + ' Arcane Shot');
   text('feedback', sim.message);
 }
 $('play').onclick = () => {
   sim.running = !sim.running;
-  sim.message = sim.running ? 'Simuleringen körs. Tryck 1 för castspell eller 2 för InstaCast.' : 'Simuleringen är pausad.';
+  sim.message = sim.running ? 'Simuleringen körs. Tryck 1 för Steady Shot eller 2 för Arcane Shot.' : 'Simuleringen är pausad.';
   render();
 };
 $('reset').onclick = () => { sim.reset(); render(); };
@@ -154,7 +154,7 @@ function selectHandle(kind) {
   $('castOffset').classList.toggle('selected-handle', kind === 'cast');
   $('instantOffset').classList.toggle('selected-handle', kind === 'instant');
   const percent = Number($(kind === 'cast' ? 'castOffset' : 'instantOffset').value);
-  text('offsetValue', (kind === 'cast' ? 'Castspell: ' : 'InstaCast: ') +
+  text('offsetValue', (kind === 'cast' ? 'Steady Shot: ' : 'Arcane Shot: ') +
     format(percent / 100 * sim.config.interval, 3) + ' · ' + number(percent, 1) + '%');
 }
 $('selectCast').onclick = () => selectHandle('cast');
@@ -164,7 +164,7 @@ for (const [id, kind] of [['castOffset', 'cast'], ['instantOffset', 'instant']])
   $(id).addEventListener('focus', () => selectHandle(kind));
 }
 function settings() {
-  for (const id of ['interval', 'wind', 'gcd', 'duration']) {
+  for (const id of ['interval', 'wind', 'gcd', 'duration', 'instantCooldown']) {
     sim.config[id] = Number($(id).value); $(id + 'Value').textContent = format(sim.config[id]);
   }
   sim.config.mode = $('mode').value;
@@ -172,12 +172,12 @@ function settings() {
   text('cycleTitle', 'Auto Shot cycle · ' + format(sim.config.interval));
   text('cooldownTitle', 'Weapon cooldown · ' + format(sim.config.interval - sim.config.wind));
   text('windTitle', 'Auto Shot wind-up · ' + format(sim.config.wind));
-  text('spellTitle', 'Spell cast · ' + format(sim.config.duration));
+  text('spellTitle', 'Steady Shot cast · ' + format(sim.config.duration));
   text('cycleSummary', 'Weapon cooldown ' + format(sim.config.interval - sim.config.wind) +
     ' + Auto Shot wind-up ' + format(sim.config.wind) + ' = Auto Shot cycle ' + format(sim.config.interval) + '.');
   text('gcdTitle', 'Global cooldown · ' + format(sim.config.gcd));
-  text('gcdPreviewTitle', 'GCD · Castspell · ' + format(sim.config.gcd));
-  text('instantGcdTitle', 'GCD · InstaCast · ' + format(sim.config.gcd));
+  text('gcdPreviewTitle', 'GCD · Steady Shot · ' + format(sim.config.gcd));
+  text('instantGcdTitle', 'GCD · Arcane Shot · ' + format(sim.config.gcd));
   sim.config.queue = $('queue').checked;
   sim.config.autoCast = $('autoCast').checked;
   sim.config.autoInstant = $('autoCast').checked && $('includeInstant').checked;
@@ -232,7 +232,7 @@ function settings() {
     region.style.width = (segment.duration / sim.config.interval * 100) + '%';
     return region;
   }));
-  text('instantPreviewText', 'Orange: planerad InstaCast vid ' + format(sim.config.instantOffset * sim.config.interval, 3) +
+  text('instantPreviewText', 'Orange: planerad Arcane Shot vid ' + format(sim.config.instantOffset * sim.config.interval, 3) +
     ', följd av ' + format(sim.config.gcd) + ' ny GCD. Ingen kasttid.');
   const schedule = schedulePreview(sim.config, $('includeInstant').checked);
   const window = queueWindow(sim.config, $('includeInstant').checked);
@@ -243,7 +243,7 @@ function settings() {
   text('queueWindowText', window.available ?
     'Turkos markering: ' + format(window.start, 3) + '–' + format(window.end, 3) +
     ' efter Auto Shot (' + number(window.start / sim.config.interval * 100, 1) + '–100 %). ' +
-    'Tryck castspellen under detta intervall för att köa den till nästa avfyrning. ' +
+    'Tryck Steady Shot under detta intervall för att köa den till nästa avfyrning. ' +
     'Beräknat för ostörd cykel och förutsätter att planerade spells går iväg; kontrollera konfliktvarningen.' :
     window.reason === 'disabled' ? 'Aktivera köning under uppdragningen i det blockerande läget för att visa Köfönster.' :
     window.reason === 'clipping' ? 'Den planerade casten fördröjer uppdragningen. Justera planen innan ett Köfönster för ostörd cykel kan visas.' :
@@ -265,14 +265,15 @@ function settings() {
   $('scheduleStatus').classList.toggle('has-conflict', !schedule.valid);
   text('scheduleStatus', schedule.valid ? '✓ Inga cast-/GCD-konflikter i den upprepade planen.' :
     '⚠ Planen kan inte utföras varje cykel. ' + schedule.issues.map(issue =>
-      (issue.kind === 'cast' ? 'Castspell' : 'InstaCast') + ' avvisas: ' + issue.reason +
+      (issue.kind === 'cast' ? 'Steady Shot' : 'Arcane Shot') + ' avvisas: ' + issue.reason +
       (issue.carry ? ' från föregående cykel' : '') + ' har ' + format(issue.remaining, 3) +
       ' kvar vid försöket.').join(' ') + ' Flytta knopparna manuellt; inga försök flyttas eller köas om automatiskt.');
   $('castLabel').textContent = 'Cast time ' + format(sim.config.duration);
-  text('instantLabel', '10 skada direkt · ' + format(sim.config.gcd) + ' ny GCD');
+  text('instantLabel', '10 skada direkt · ' + format(sim.config.gcd) + ' ny GCD' +
+    (sim.config.instantCooldown ? ' · ' + format(sim.config.instantCooldown) + ' cooldown' : ''));
   sim.reset(); render();
 }
-for (const id of ['interval', 'wind', 'gcd', 'duration', 'gcdStart', 'mode', 'queue', 'autoCast', 'castOffset', 'instantOffset', 'includeInstant', 'warmup']) {
+for (const id of ['interval', 'wind', 'gcd', 'duration', 'instantCooldown', 'gcdStart', 'mode', 'queue', 'autoCast', 'castOffset', 'instantOffset', 'includeInstant', 'warmup']) {
   $(id).addEventListener('input', () => {
     if (id === 'castOffset') selectedHandle = 'cast';
     if (id === 'instantOffset') selectedHandle = 'instant';
