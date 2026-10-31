@@ -14,10 +14,19 @@ local CAST_W, CAST_H, BORDER_W, BORDER_H, BORDER_TOP = 195, 13, 256, 64, 28
 local SIDE = (BORDER_W - CAST_W) / 2
 -- Only the metal edge above and below the opening; the rest of the texture is padding and shadow.
 local EDGE = 10
--- Action-button art for the Auto Shot badge: Blizzard draws a 36 px icon in a 66 px slot frame.
+-- Auto Shot badge styles (/ozs badge). Sizes are in units of the icon diameter s.
+--   button: action-button slot (36 px icon in a 66 px frame) with a square glow.
+--   ring:   minimap-button gold ring (20 px icon centred 17,-15 inside a 53 px ring).
+--   elite/rare: the target frame's dragon around its 64 px portrait. The portrait centre in the
+--   texture is an estimate (about 175,42 of 256x128); adjust ELITE_* after a screenshot.
 local SLOT = "Interface\\Buttons\\UI-Quickslot2"
 local GLOW = "Interface\\Buttons\\UI-ActionButton-Border"
+local RING = "Interface\\Minimap\\MiniMap-TrackingBorder"
+local DRAGON = {elite = "Interface\\TargetingFrame\\UI-TargetingFrame-Elite",
+    rare = "Interface\\TargetingFrame\\UI-TargetingFrame-Rare"}
+local ELITE_LEFT, ELITE_CX, ELITE_CY, ELITE_W, ELITE_H = 136, 175, 42, 256, 100
 local FALLBACK_ICON = "Interface\\Icons\\INV_Weapon_Bow_07"
+Display.BADGES = {button = true, ring = true, elite = true, rare = true}
 Display.BORDER = 0.8
 
 local COLORS = {
@@ -96,17 +105,14 @@ function Display:New(settings)
     ui.spark = top:CreateTexture(nil, "OVERLAY")
     ui.spark:SetTexture(SPARK)
     ui.spark:SetBlendMode("ADD")
-    -- Auto Shot badge right of the bar, styled as an action button. On a delayed shot the icon greys,
-    -- glows yellow (paid off, below break-even) or red (cost DPS) and shows the delay, e.g. "+0,8".
+    -- Auto Shot badge right of the bar. On a delayed shot the icon greys, its ornament turns
+    -- yellow (paid off, below break-even) or red (cost DPS) and the delay shows on it, e.g. "+0,8".
     ui.badge = CreateFrame("Frame", nil, frame)
     ui.badge:SetFrameLevel(frame:GetFrameLevel() + 4)
     ui.icon = ui.badge:CreateTexture(nil, "ARTWORK")
     ui.icon:SetAllPoints(ui.badge)
-    ui.icon:SetTexture(GetSpellTexture and GetSpellTexture(75) or FALLBACK_ICON)
-    ui.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
-    ui.slot = ui.badge:CreateTexture(nil, "OVERLAY")
-    ui.slot:SetTexture(SLOT)
-    ui.slot:SetPoint("CENTER", ui.badge, "CENTER", 0, 0)
+    ui.iconPath = GetSpellTexture and GetSpellTexture(75) or FALLBACK_ICON
+    ui.ornament = ui.badge:CreateTexture(nil, "OVERLAY")
     ui.glow = ui.badge:CreateTexture(nil, "OVERLAY", nil, 1)
     ui.glow:SetTexture(GLOW)
     ui.glow:SetBlendMode("ADD")
@@ -150,8 +156,7 @@ function Display:Layout()
     self.badge:ClearAllPoints()
     self.badge:SetPoint("LEFT", frame, "RIGHT", 6 + 10 * k, 0)
     self.badge:SetSize(icon, icon)
-    self.slot:SetSize(icon * 66 / 36, icon * 66 / 36)
-    self.glow:SetSize(icon * 70 / 36, icon * 70 / 36)
+    self:BadgeStyle(settings.badge or "ring", icon)
     self.delay:SetFont(FONT, math.max(10, math.floor(icon * 0.42)), "OUTLINE")
     local castH, meleeH = math.max(6, math.floor(h / 2)), math.max(3, math.floor(h / 5))
     self.cast:ClearAllPoints()
@@ -163,6 +168,42 @@ function Display:Layout()
     self.melee:SetPoint("TOP", self.cast, "BOTTOM", 0, -3)
     self.melee:SetSize(w, meleeH)
     self.melee.fill:SetHeight(meleeH)
+end
+
+function Display:BadgeStyle(style, s)
+    self.style = style
+    local icon, ornament = self.icon, self.ornament
+    ornament:ClearAllPoints()
+    ornament:SetTexCoord(0, 1, 0, 1)
+    if style == "button" or not SetPortraitToTexture then
+        icon:SetTexture(self.iconPath)
+        icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+    else
+        -- Round portrait-style icon inside the ring or dragon.
+        SetPortraitToTexture(icon, self.iconPath)
+        icon:SetTexCoord(0, 1, 0, 1)
+    end
+    if style == "button" then
+        ornament:SetTexture(SLOT)
+        ornament:SetPoint("CENTER", self.badge, "CENTER", 0, 0)
+        ornament:SetSize(s * 66 / 36, s * 66 / 36)
+        self.glow:SetTexture(GLOW)
+        self.glow:SetBlendMode("ADD")
+        self.glow:SetPoint("CENTER", self.badge, "CENTER", 0, 0)
+        self.glow:SetSize(s * 70 / 36, s * 70 / 36)
+    elseif style == "ring" then
+        local f = s / 20
+        ornament:SetTexture(RING)
+        ornament:SetPoint("TOPLEFT", self.badge, "CENTER", -17 * f, 15 * f)
+        ornament:SetSize(53 * f, 53 * f)
+    else
+        local f = s / 64
+        ornament:SetTexture(DRAGON[style])
+        ornament:SetTexCoord(ELITE_LEFT / 256, 1, 0, ELITE_H / 128)
+        ornament:SetPoint("TOPLEFT", self.badge, "CENTER", -(ELITE_CX - ELITE_LEFT) * f, ELITE_CY * f)
+        ornament:SetSize((ELITE_W - ELITE_LEFT) * f, ELITE_H * f)
+    end
+    self.glow:Hide()
 end
 
 -- cast: {name = , progress = 0..1} or nil; melee: swing progress 0..1 or nil.
@@ -242,11 +283,14 @@ function Display:Paint(view, forceVisible)
         local c = view.delayWorthIt and COLORS.worth or COLORS.cost
         self.delay:SetTextColor(c[1], c[2], c[3])
         self.delay:Show()
-        self.glow:SetVertexColor(c[1], c[2], c[3], 1)
-        self.glow:Show()
+        if self.style == "button" then
+            self.glow:SetVertexColor(c[1], c[2], c[3], 1)
+            self.glow:Show()
+        else self.ornament:SetVertexColor(c[1], c[2], c[3], 1) end
         self.icon:SetDesaturated(true)
     else
         self.delay:Hide(); self.glow:Hide()
+        self.ornament:SetVertexColor(1, 1, 1, 1)
         self.icon:SetDesaturated(false)
     end
     -- The badge belongs to the running timer, not to an idle bar shown for casting or melee only.

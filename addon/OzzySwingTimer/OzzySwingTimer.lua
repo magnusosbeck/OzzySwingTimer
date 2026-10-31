@@ -206,7 +206,7 @@ local function command(message)
         say(settings.locked and "Baren är låst." or "Dra baren med vänster musknapp. /ozs lock låser.")
     elseif cmd == "reset" then
         for key, value in pairs(defaults) do settings[key] = value end
-        settings.windup, settings.border = nil, nil; display:Layout()
+        settings.windup, settings.border, settings.badge = nil, nil, nil; display:Layout()
     elseif cmd == "size" then
         local width, height = rest:match("^(%d+)%s+(%d+)$")
         width, height = tonumber(width), tonumber(height)
@@ -217,6 +217,10 @@ local function command(message)
         local scale = tonumber(rest)
         if scale and scale >= 0.5 and scale <= 3 then settings.scale = scale; display:Layout()
         else say("/ozs scale 1 (0.5–3)") end
+    elseif cmd == "badge" then
+        local style = string.lower(rest)
+        if ns.Display.BADGES[style] then settings.badge = style; display:Layout()
+        else say("/ozs badge ring | elite | rare | button") end
     elseif cmd == "border" then
         local value = tonumber((rest:gsub(",", ".")))
         if value and value >= 0.4 and value <= 2 then settings.border = value; display:Layout()
@@ -249,7 +253,7 @@ local function command(message)
         say("Wind-up: " .. (ns.windSource or "okänd") .. ". GCD läses från spell " .. gcdSpell ..
             ": " .. (model.gcdKnown and "tillgängligt" or "okänt"))
     else
-        say("/ozs test · panel · unlock · lock · size 300 20 · scale 1 · border 0.8 · status · debug on/off · mark <text> · breakeven 1.3 · windup auto/0.5 · reset")
+        say("/ozs test · panel · unlock · lock · size 300 20 · scale 1 · border 0.8 · badge ring/elite/rare/button · status · debug on/off · mark <text> · breakeven 1.3 · windup auto/0.5 · reset")
     end
 end
 
@@ -264,6 +268,7 @@ local function initialize()
     settings.scale = math.max(0.5, math.min(3, settings.scale))
     if not number(settings.windup) then settings.windup = nil end
     if not number(settings.border) then settings.border = nil end
+    if not ns.Display.BADGES[settings.badge or ""] then settings.badge = nil end
     model, display = ns.Model:New(), ns.Display:New(settings)
     ns.model, ns.display = model, display
     if number(settings.breakEven) then model.breakEven = settings.breakEven end
