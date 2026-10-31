@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="sv"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Ozzy Swing Lab</title><link rel="stylesheet" href="style.css"><link rel="stylesheet" href="lab.css"></head>
+<body><main>
+<header><a class="brand" href="#">O<span>↗</span> / OZZY</a><span class="badge">INTERAKTIV PROTOTYP · 01</span></header>
+<section class="intro"><p class="eyebrow">HUNTER TIMING LAB</p><h1>Hitta din rytm.</h1><p>En timer i taget. Känn skiftet mellan väntan, uppdragning och skott — och prova var din cast passar in.</p></section>
+<div class="workspace"><section class="panel simulation" aria-label="Simulator">
+<div class="toolbar"><div><span id="statusDot" class="dot"></span><strong id="status">Pausad</strong><span id="clock">0,00 s</span><span id="fps" title="Uppmätt frekvens för webbläsarens animationsuppdateringar, oberoende av vald simuleringshastighet.">— FPS</span></div><div><button id="reset" class="quiet">Återställ</button><button id="play" class="primary">Starta</button></div></div>
+<div class="timers" id="timers"></div>
+<section class="auto-control" aria-label="Automatisk casting">
+<div class="auto-heading"><label class="auto-toggle"><input id="autoCast" type="checkbox" checked> Kasta automatiskt</label><output id="offsetValue">0,00 s efter Auto Shot</output></div>
+<label class="instant-auto"><input id="includeInstant" type="checkbox" checked> Inkludera InstaCast i automatiken</label>
+<div class="gcd-preview-heading"><span id="gcdPreviewTitle">GCD · 1,00 s</span><span>Förhandsvisning</span></div>
+<div class="gcd-preview-track" aria-hidden="true"><div id="gcdPreview"></div><div id="castConflict" class="conflict-layer"></div><i id="gcdWindBoundary"></i></div>
+<div class="gcd-preview-heading instant-gcd-heading"><span id="instantGcdTitle">GCD · InstaCast</span><span>Förhandsvisning</span></div>
+<div class="gcd-preview-track instant-gcd-track" aria-hidden="true"><div id="instantGcdPreview"></div><div id="instantConflict" class="conflict-layer"></div></div>
+<div class="cycle-map" aria-hidden="true"><div id="waitBand" class="phase-band"><div id="castPreview"></div><span id="waitBandText">Weapon cooldown</span></div><span id="windBand">Auto Shot wind-up</span><i id="autoMarker"></i><i id="instantMarker"></i></div>
+<div class="queue-window-track" aria-hidden="true"><div id="queueWindowMarker"></div></div>
+<div class="shared-slider" role="group" aria-label="Två kasttidpunkter längs samma skottcykel">
+<input id="castOffset" class="cast-handle" aria-label="Grön knopp: castspellens tidpunkt" type="range" min="0" max="100" step="0.1" value="0">
+<input id="instantOffset" class="instant-handle" aria-label="Orange knopp: InstaCastens tidpunkt" type="range" min="0" max="100" step="0.1" value="60">
+</div>
+<div class="scale-labels"><span>Auto Shot avfyras · 0%</span><span>Nästa skott · 100%</span></div>
+<div class="handle-selectors"><button id="selectCast" class="select-cast" aria-pressed="true">● Castspell <span id="castOffsetLabel"></span></button><button id="selectInstant" class="select-instant" aria-pressed="false">◆ InstaCast <span id="instantOffsetLabel"></span></button></div>
+<div class="queue-window-info"><div><strong>Köfönster</strong><output id="queueWindowDuration">—</output></div><p id="queueWindowText"></p></div>
+<div id="scheduleStatus" class="schedule-status" role="status"></div>
+<p class="preview-caption"><span class="legend-dot" aria-hidden="true"></span><span id="castPreviewText">Blått visar spellens casttid i vapenväntan.</span></p>
+<p class="gcd-preview-caption"><span class="legend-dot gcd-dot" aria-hidden="true"></span><span id="gcdPreviewText">Lila visar GCD från caststart.</span></p>
+<p id="instantPreviewText" class="instant-caption"></p>
+<p class="hint">Planerade tidsfönster: blått visar casttid, lila castspellens GCD och orange InstaCastens GCD. Röd skraffering visar blockerad tid efter ett avvisat försök, inte två GCD som körs samtidigt. InstaCast startar en ny GCD bara om försöket lyckas.</p>
+<div class="fine-controls"><button id="earlier" aria-label="Flytta kastet 10 millisekunder tidigare">−10 ms</button><button id="later" aria-label="Flytta kastet 10 millisekunder senare">+10 ms</button><span id="attempts">0 avvisade försök</span></div>
+<p class="hint">Ett försök per vald spell och Auto Shot-cykel, från första avfyrningen. Ett blockerat försök hoppas över. Vid samma tidpunkt försöker castspellen först. Välj knopp för ±10 ms. Ändrad tidpunkt återställer och pausar.</p>
+</section>
+<div class="actions"><button id="cast" class="cast">↗ Kasta spell <kbd>1</kbd><small id="castLabel">Kasttid 1,50 s</small></button><button id="instant" class="instant-action">◆ InstaCast <kbd>2</kbd><small id="instantLabel">Direkt träff · Ny GCD</small></button></div>
+<p id="feedback" role="status">Starta simuleringen. Första Auto Shot börjar med en uppdragning.</p>
+<p id="warmupStatus" class="measurement-status">Uppvärmning · 0 / 10 Auto Shots</p>
+<div class="metrics dps-summary"><div><span>DPS · skada / simulerad sekund</span><strong id="dps">—</strong><small>Uppdateras efter varje hel skottcykel</small></div><div><span>Timingmarginal · senaste cykeln</span><strong id="cycleMargin">—</strong><small id="marginNote">Visas efter första hela skottcykeln</small></div></div>
+<p id="baseline" class="baseline">DPS visas efter första hela skottcykeln.</p>
+<p id="dpsExplanation" class="footnote">Uppvärmningen räknas bort innan DPS-mätningen börjar.</p>
+<p class="footnote">Rött minus = klippt tid för senaste cykeln. Grönt plus = tiden från avslutad blockerande cast till planerad uppdragning. Grönt noll = ingen klippning. Båda värdena uppdateras vid cykelslut.</p>
+</section>
+<div class="right-column">
+<section class="panel hud-preview" aria-label="Förslag 1: Pendel, GUI-förhandsvisning">
+<div class="hud-preview-heading"><p class="eyebrow">GUI · FÖRSLAG 01</p><span>LIVE PREVIEW</span></div>
+<h2>Pendel</h2>
+<div class="hud-stage">
+<div class="hud-readout"><span id="pendulumPhase">Auto Shot wind-up</span><span id="pendulumRemaining">0,50 s</span></div>
+<div id="pendulumTrack" class="pendulum-track" role="progressbar" aria-label="Pendel" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+<div id="pendulumFill" class="pendulum-fill"></div><div id="pendulumLocks" class="pendulum-locks"></div><div id="hudWindupWindow" class="hud-windup-window" hidden></div><div id="pendulumCursor" class="pendulum-cursor"></div>
+</div>
+<div class="hud-state"><span id="pendulumDirection">→</span><span id="pendulumStatus">Starta simuleringen</span></div>
+<div class="hud-windup-readout"><span id="hudWindupWindowLabel">Köfönster i wind-up</span><strong id="hudWindupWindowValue">—</strong></div>
+<p id="hudWindupWindowHint" class="hud-windup-hint">Turkost visar fönstret under den snabba fasen.</p>
+</div>
+<div class="hud-budget">
+<div><span>Action lock kvar</span><strong id="hudLockTime">—</strong></div>
+<div><span>Fritt efter spärren</span><strong id="hudFreeTime">—</strong></div>
+<div class="hud-fit-options"><span id="hudFitCast">Cast + GCD · —</span><span id="hudFitInstant">InstaCast + GCD · —</span></div>
+<p id="hudBudgetNote">Visar utrymmet helt före Auto Shot wind-up.</p>
+</div>
+<div class="pendulum-legend"><span><i class="slow-dot"></i>← Weapon cooldown</span><span><i class="fast-dot"></i>Wind-up → röd före, grön i Köfönstret</span></div>
+<p class="hint">Blått visar faktiska knapptrycks Action lock: den längsta av Spell cast och GCD. Markeringen börjar vid faktisk caststart. Långsamt åt vänster, snabbt åt höger.</p>
+</section>
+<aside class="panel settings"><p class="eyebrow">FÖRSÖKSINSTÄLLNINGAR</p><h2>Ändra förutsättningarna</h2>
+<label>Weapon speed <output id="intervalValue"></output><input id="interval" type="range" min="1.5" max="5" step="0.1" value="2.8"></label>
+<p class="hint">Intervallet mellan Auto Shots i simuleringen. Hela Auto Shot cycle, inklusive wind-up.</p>
+<label>Auto Shot wind-up <output id="windValue"></output><input id="wind" type="range" min="0.1" max="1" step="0.05" value="0.5"></label>
+<p id="cycleSummary" class="hint"></p>
+<label>Global cooldown <output id="gcdValue"></output><input id="gcd" type="range" min="0.5" max="2" step="0.05" value="1"></label>
+<p class="hint">Separat försöksvärde. GCD hindrar nästa spell men blockerar inte Auto Shot i sig i denna modell.</p>
+<p class="fixed-times">Fasta spellvärden: <strong>Spell cast 1,50 s</strong> · <strong>InstaCast 0 s</strong>.</p>
+<label>Uppspelningshastighet<select id="speed"><option value="0.25">0,25× · detaljstudie</option><option value="0.5">0,5× · långsamt</option><option value="1" selected>1× · normal</option><option value="2">2× · snabbt</option><option value="5">5× · mycket snabbt</option></select></label>
+<p class="hint">Hastigheten ändrar bara hur fort simulerad tid går. DPS räknas per simulerad sekund.</p>
+<label class="check"><input id="warmup" type="checkbox" checked> Uppvärmning · hoppa över 10 Auto Shots</label>
+<p class="hint">DPS mäts efter uppvärmningen för att jämföra placeringar utan startförsprång. På/av återställer försöket och pausar.</p>
+<label>Hur påverkar Spell cast Auto Shot?<select id="mode"><option value="blocking">Blockerar Auto Shot wind-up</option><option value="parallel">Kan kastas parallellt</option></select></label>
+<label class="check"><input id="queue" type="checkbox" checked> Köa spell under Auto Shot wind-up</label>
+<p class="hint">Med köning börjar spellens cast efter Auto Shot. Utan köning avvisas knapptrycket under uppdragningen i det blockerande läget.</p>
+<p class="notice">Det här är en förenklad försöksmodell, inte en verifierad kopia av TBC eller Forever. GCD är en egen inställning. Auto Shot, färdig castspell och InstaCast ger 10 skada vardera. Ändrade tidsregler återställer försöket.</p>
+</aside></div></div>
+<section class="bottom"><div><p class="eyebrow">LÄS RYTMEN</p><h2>Långsam. Snabb. Skott.</h2><p>Weapon cooldown ger rörelseutrymme. Auto Shot wind-up kräver att du står still. Tillsammans bildar de Auto Shot cycle. Varje mätare visas separat så att vi kan undersöka delarna innan vi formar den slutliga baren.</p></div></section>
+<footer>OZZY SWING LAB <span>Lokalt i din webbläsare · ingen backend</span></footer>
+</main><script type="module" src="app.js"></script></body></html>

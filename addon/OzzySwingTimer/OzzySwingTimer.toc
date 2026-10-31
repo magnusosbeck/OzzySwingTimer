@@ -1,0 +1,10 @@
+## Interface: 20506
+## Title: Ozzy Swing Timer
+## Notes: Hunter pendulum swing timer with cast/GCD occupancy and wind-up queue cues.
+## Author: Ozzy
+## Version: 0.1.0
+## SavedVariables: OzzySwingTimerDB
+
+Model.lua
+Display.lua
+OzzySwingTimer.lua
