@@ -1,6 +1,6 @@
 # Ozzy Swing Timer
 
-Projektbeskrivning och nuläge, uppdaterat 2026-10-31.
+Projektbeskrivning och nuläge, uppdaterat 2026-10-31. Projektet är pausat vid addon-version **0.12.0**.
 
 ## Vad vi försöker bygga
 
@@ -49,7 +49,7 @@ Grunden är en pendelbar:
 
 Målet (2026-10-31): få plats med en Steady Shot och en instant i den långsamma fasen utan att Auto Shot skjuts upp. Om det får plats beror på vapnet och haste. Flashen och den turkosa ramen är borttagna (0.3.0); signalen ska gå att läsa i ögonvrån.
 
-Spelversionen visar bara baren och förskjutningssiffran, utan fasnamn eller andra sekundvärden. Mer detaljerad information hör hemma i simulatorn eller diagnostiken.
+Spelversionen visar baren, förskjutningssiffran i en svart bubbla med silverdrake, en castbar med spellnamn och en smal melee-swingtimer. Delarna kan flyttas var för sig. Mer detaljerad information hör hemma i simulatorn eller diagnostiken.
 
 ## Vad vi har byggt hittills
 
@@ -63,46 +63,46 @@ Vi har också lagt till förenklad skadesimulering med samma skada per Auto Shot
 
 Simulatorn är en experimentmiljö. Dess antaganden är inte automatiskt bekräftad spelmekanik.
 
-### Första TBC-addonen
+### TBC-addonen (0.12.0)
 
-Vi har nu skapat **Ozzy Swing Timer 0.1.0**, en fristående addonmapp för **TBC Classic Anniversary 2.5.6**, Interface 20506. Den använder WoW:s egna frames och texturer och behöver inga externa addonbibliotek.
+En fristående addonmapp för **TBC Classic Anniversary 2.5.6**, Interface 20506. Den använder bara WoW:s egna frames och texturer och behöver inga externa addonbibliotek. Den har provats i spelet, även i en dungeon.
 
-Första versionen innehåller pendelbaren, cast/GCD-markering, köfönster och grön flash. Position, storlek och skala kan sparas. Det finns dragläge, låsning, ett visuellt testläge samt status och diagnostik via `/ozs`.
+- **Huvudbaren** har castbarens ram (nio delar, tjocklek med `/ozs border`), gnista som markör och statusbar-textur. Guld för långsam fas, grön för tryck nu, röd för ur fas, grå för väntan före första skottet, blått för cast/GCD.
+- **Auto Shot-bubblan** till höger visar förskjutningen: svart bubbla med silverdrake (`/ozs badge`), gul när en extra spell lönade sig (under brytpunkten, `/ozs breakeven`), röd när det kostade DPS. Off-GCD-spells som Kill Command räknas inte.
+- **Castbar** i halv höjd med spellnamn och **melee-swingtimer** under huvudbaren.
+- **Flyttbara delar** i upplåst läge, sparade relativt huvudbaren.
+- **Data från klienten:** vapenintervall från `UnitRangedDamage`, wind-up som median av uppmätta skott, GCD från Steady Shot (61304 rapporterar inget), casttid från `UnitCastingInfo`.
+- **Diagnostik och testpanel:** `/ozs debug on`, `/ozs mark`, `/ozs panel` med nio tester, egen skada per träff.
 
-Skottens timing förankras i klientens rapporterade avfyrningar. Vapenintervallet läses från klienten, och casttid och GCD läses separat. Wind-up uppskattas först och kan sedan kalibreras från observerad skottstart och avfyrning. Addonen använder inte simulatorns fasta GCD-värde.
+**30 automatiserade tester passerar** med simulerade WoW-API:er.
 
-**20 automatiserade tester passerar** för tidsmodellen och händelsekopplingen med simulerade WoW-API:er.
+### Mätningar i spelet
 
-### Första mätningarna i spelet (0.1.1–0.2.0)
+Alla mätningar finns i `docs/timing-design.md`. Kort sammanfattat:
 
-Addonen har körts i TBC Anniversary med diagnostik och en testpanel (`/ozs panel`). Mätningarna finns i `docs/timing-design.md`. Kort sammanfattat:
-
-- Vapenintervallet från klienten stämmer med uppmätta skott.
-- Wind-up är cirka 0,36 s i median, inte 0,5 s, med brus på cirka ±0,1 s. Addonen lär sig nu medianen.
-- Steady Shot som trycks under wind-up köas av klienten och startar exakt när Auto Shot avfyras. Skottet avbryts inte.
-- Steady tryckt sent i den långsamma fasen kostar märkbart mer tid per cykel än Steady tryckt under wind-up.
-- GCD-spellen 61304 rapporterar inget i denna klient. Version 0.2.0 läser GCD från Steady Shot i stället och bygger flashen på den observerade köningen. Detta är ännu inte provat i spelet.
+- Vapenintervallet från klienten stämmer. Hela cykeln är weapon speed; wind-up ingår i den.
+- Wind-up är cirka 0,36 s i median, med brus på cirka ±0,1 s.
+- Steady Shot som trycks under wind-up, eller strax före, köas till skottet. GCD börjar redan vid trycket.
+- GCD är 1,5 s. Med 2,29 s cykel ryms högst 1,5 GCD-förmågor per cykel (Steady varje cykel, instant varannan).
+- En handling som slutar inom cirka 0,4 s före wind-up verkar skjuta upp skottet 0,2–0,35 s (hypotes).
+- Uppmätt skada: Auto Shot 632, Steady 561, Arcane 698. Brytpunkt för en Arcane cirka 1,3 s förskjutning.
 
 ## Vad vi fortfarande behöver ta reda på
 
-- ~~Vad händer när man trycker Steady Shot under Auto Shots wind-up?~~ Casten köas till skottet (mätt i TBC 2.5.6). Kvar: börjar GCD tidigare än casten?
-- Köas ett tryck även när GCD fortfarande pågår i början av wind-up? Hur påverkar latens och ett mindre SpellQueueWindow?
-- ~~Vilka skottstartshändelser får vi pålitligt?~~ Start via stridsloggen, avfyrning via `UNIT_SPELLCAST_SUCCEEDED`; wind-up kan mätas med median.
-- Hur påverkas vapenintervall, wind-up, casttid och GCD av olika haste- och attack speed-effekter?
-- Kan en viss instantförmåga fördröja Auto Shot, och beror det då på GCD eller en separat regel för förmågan?
-- Vilka förmågor återställer eller påverkar swingtimern på andra sätt?
+- Bekräfta att en handling strax före wind-up skjuter upp skottet, och var gränsen går (fler cykler).
+- Varför skickas en spell i långsam fas 0,15–0,47 s efter trycket? Testa utan makro.
+- Brytpunkten bygger på 38 träffar; räkna om med fler fights (skadan loggas automatiskt).
+- Hur påverkas vapenintervall, wind-up, casttid och GCD av haste-effekter utöver Quick Shots?
+- Aimed Shot och andra förmågor som återställer swingtimern.
+- Sitter silverdraken rätt? Dess position i texturen är uppskattad.
 - Vilka skillnader kräver en egen implementation för WoW Forever?
-
-Arbetsmodellen låter GCD hindra nästa vanliga förmåga men inte Auto Shot i sig. Det är en utgångspunkt för testning, inte ett färdigverifierat svar för alla förmågor eller spelversioner. Den gröna flashen är en bekräftelse utifrån händelseordningen och garanterar inte att rotationen var optimal eller utan clipping.
 
 ## Nästa steg
 
-1. ~~Installera addonen, testa ren Auto Shot och Steady Shot under wind-up.~~ Klart 2026-10-31.
-2. Prova 0.2.0 i spelet: syns GCD i baren och kommer den gröna flashen när Steady köas till skottet?
-3. Gör de tester som saknas: Steady i grön zon, rotation Steady + Arcane, Aimed Shot.
-4. Mät GCD-start och GCD-längd relativt det köade trycket, och upprepa med haste.
-5. Justera modellen efter observationerna och fortsätt iterera på gränssnittet.
-6. Anpassa och verifiera Forever-versionen när den kan testas.
+1. Använda addonen i vanligt spel och notera vad som känns fel.
+2. Mäta det som återstår ovan, med `/ozs panel` och `/ozs debug on`.
+3. Eventuellt ett rotationsläge i simulatorn som växlar mellan cykler (Steady varje cykel, instant varannan).
+4. Anpassa och verifiera Forever-versionen när den kan testas.
 
 Vi räknar med att bygga om gränssnittet flera gånger. Pendelns rytm är grunden; hur extra information bäst visas ska utvecklas genom praktisk användning.
 
