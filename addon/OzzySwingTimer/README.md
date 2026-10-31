@@ -1,4 +1,4 @@
-# Ozzy Swing Timer – TBC Classic 0.8.0
+# Ozzy Swing Timer – TBC Classic 0.9.0
 
 Första spelbara prototypen för **TBC Classic Anniversary 2.5.6**, Interface 20506.
 Själva addonmappen kräver inga bibliotek eller andra addons.
@@ -27,7 +27,7 @@ en castbar i halv höjd med spellens namn (syns när du castar) och en smal mele
 - **Weapon cooldown:** långsam guldfärgad fyllning från höger till vänster.
 - **Auto Shot wind-up, grön:** dags att trycka. Steady Shot köas till skottet, och dess GCD börjar redan vid trycket.
 - **Auto Shot wind-up, röd:** ur fas. Cast eller GCD hänger kvar över wind-up. Tryck inget, låt ett orört Auto Shot gå för att komma i takt igen.
-- **Siffra till höger, t.ex. +0,8:** hur många sekunder det senaste Auto Shot försköts jämfört med en ostörd cykel. **Gul** när en extra spell (allt utom Steady Shot som startar GCD, t.ex. Arcane) användes inom två cykler och förskjutningen är under brytpunkten (`/ozs breakeven`, standard 1,3 s): den lönade sig. **Röd** annars: den kostade DPS. Visas från 0,15 s, eftersom skotten varierar cirka ±0,1 s även utan clipping. Försvinner när ett skott kommer i tid.
+- **Auto Shot-ikon till höger** i action-knappsram. Vid förskjutet skott blir ikonen grå, får gul eller röd glöd och visar siffran, t.ex. **+0,8**: hur många sekunder det senaste Auto Shot försköts jämfört med en ostörd cykel. **Gul** när en extra spell (allt utom Steady Shot som startar GCD, t.ex. Arcane) användes inom två cykler och förskjutningen är under brytpunkten (`/ozs breakeven`, standard 1,3 s): den lönade sig. **Röd** annars: den kostade DPS. Visas från 0,15 s, eftersom skotten varierar cirka ±0,1 s även utan clipping. Försvinner när ett skott kommer i tid.
 - **Blå diagonal markering:** faktisk spell cast och GCD tillsammans. Överlapp räknas en gång; GCD som fortsätter in i nästa cykel visas där också.
 
 ## Kommandon

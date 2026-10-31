@@ -173,7 +173,11 @@ local function demoView(now)
     state:UpsertLock("gcd", "preview", release + 1.5, release + 2.5)
     if t >= 2.3 then state:BeginWind(release + 2.3, false) end
     local cast = t < 1.5 and {name = "Steady Shot", progress = t / 1.5} or nil
-    return state:View(now, false), cast, (elapsed % 2.6) / 2.6
+    local view = state:View(now, false)
+    -- Preview the Auto Shot badge: a worthwhile (yellow) and a costly (red) delay every other cycle.
+    if cycle % 4 == 1 then view.delay, view.delayWorthIt = 0.4, true
+    elseif cycle % 4 == 3 then view.delay, view.delayWorthIt = 0.8, false end
+    return view, cast, (elapsed % 2.6) / 2.6
 end
 
 -- The player's own cast or channel (not Auto Shot), for the cast bar.
