@@ -139,4 +139,30 @@ test("test mode paints both phases and exits", function()
     SlashCmdList.OZZYSWINGTIMER("lock"); event("STOP_AUTOREPEAT_SPELL"); update(113)
     assert(not ns.display.frame.shown)
 end)
+test("one noisy wind-up does not move the learned median", function()
+    local t = 200
+    for _, duration in ipairs({0.32, 0.32, 0.105, 0.48, 0.32}) do
+        now = t; event("UNIT_SPELLCAST_START", "player", "a" .. t, 75)
+        now = t + duration; event("UNIT_SPELLCAST_SUCCEEDED", "player", "a" .. t, 75)
+        t = t + 3.1
+    end
+    near(ns.model.wind, 0.32)
+end)
+test("debug log records session, marks, GCD and instant casts", function()
+    SlashCmdList.OZZYSWINGTIMER("debug on")
+    SlashCmdList.OZZYSWINGTIMER("mark steady early")
+    now = 230; cooldown = {startTime = 230, duration = 1.5, modRate = 1}; update(230)
+    C_Spell.GetSpellInfo = function() return {castTime = 0} end
+    event("UNIT_SPELLCAST_SENT", "player", "target", "arcane1", 27019)
+    C_Spell.GetSpellInfo = function() return {castTime = 1500} end
+    local seen = {}
+    for _, entry in ipairs(OzzySwingTimerDB.events) do seen[entry.event] = entry end
+    assert(seen.SESSION and seen.SESSION.build)
+    assert(seen.MARK.note == "steady early")
+    near(seen.GCD.gcdDuration, 1.5)
+    assert(seen.CAST_SENT.spellID == 27019 and seen.CAST_SENT.castTime == 0)
+    assert(not ns.model.pending)
+    SlashCmdList.OZZYSWINGTIMER("debug off")
+    cooldown = {startTime = 0, duration = 0}; update(232)
+end)
 print(string.format("%d tests passed", passed))

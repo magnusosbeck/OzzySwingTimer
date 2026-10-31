@@ -21,12 +21,17 @@ Run from the repository root (paths in the test files are root-relative):
 # Lua addon tests (Fengari, no WoW or system Lua needed)
 .diagnostics/lua-runner/node_modules/.bin/fengari addon/tests/run.lua
 
+# Run the simulator locally at http://localhost:8080/ (no login or hosting needed)
+node swing-lab/serve.mjs
+
 # Simulator logic checks (node:assert against dist/*.mjs)
 node swing-lab/check.mjs
 
 # Headless Chrome check of the simulator UI (serves swing-lab/dist, needs Chrome at the default Windows path)
 node .diagnostics/browser-check.mjs
 ```
+
+The user's game is at `C:\Program Files (x86)\World of Warcraft\_anniversary_\`. Install by copying `addon/OzzySwingTimer/*` into `Interface\AddOns\OzzySwingTimer\` (then `/reload` in game). In-game diagnostics (`/ozs debug on`, `/ozs mark <text>`) are saved on `/reload`/logout to `WTF\Account\<account>\SavedVariables\OzzySwingTimer.lua`; analyze that file to calibrate the timing model.
 
 There is no test filter; `addon/tests/run.lua` is a single script of `test(name, fn)` calls that stops at the first failure. To focus on one test, temporarily comment out others. Release zips go in `releases/` (e.g. `OzzySwingTimer-0.1.0-TBC.zip`) and must contain the `OzzySwingTimer/` folder at top level so it installs to `Interface/AddOns/OzzySwingTimer/OzzySwingTimer.toc`.
 
