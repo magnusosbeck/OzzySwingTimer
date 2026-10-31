@@ -1,4 +1,4 @@
-# Ozzy Swing Timer – TBC Classic 0.1.1
+# Ozzy Swing Timer – TBC Classic 0.1.2
 
 Första spelbara prototypen för **TBC Classic Anniversary 2.5.6**, Interface 20506.
 Själva addonmappen kräver inga bibliotek eller andra addons.
@@ -37,6 +37,7 @@ Baren innehåller inga texter eller sekundvärden:
 | `/ozs windup auto` | Uppskatta wind-up och lär från observerad skottstart |
 | `/ozs windup 0.5` | Manuell wind-up i sekunder, vid kalibrering |
 | `/ozs debug on` / `off` | Starta en ny logg med de senaste 1000 timinghändelserna / stäng av |
+| `/ozs panel` | Visa/dölj testpanelen med instruktioner och knappar |
 | `/ozs mark <text>` | Lägg en markering i loggen, t.ex. `/ozs mark steady tidigt` |
 | `/ozs reset` | Återställ storlek, position och automatisk wind-up |
 

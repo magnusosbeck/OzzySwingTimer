@@ -75,13 +75,17 @@ local function newObject() return setmetatable({scripts = {}, shown = true}, obj
 function object:SetScript(event, fn) self.scripts[event] = fn end
 function object:SetPoint(point) assert(type(point) == "string", "invalid native UI anchor") end
 function object:CreateTexture() return newObject() end
+function object:CreateFontString() return newObject() end
+function object:SetText(text) self.text = text end
+function object:IsShown() return self.shown end
 function object:GetFrameLevel() return 1 end
 function object:GetCenter() return 500, 500 end
 function object:Show() self.shown = true end
 function object:Hide() self.shown = false end
 for _, name in ipairs({"SetColorTexture", "SetWidth", "SetHeight", "SetFrameStrata", "SetClampedToScreen",
     "SetMovable", "RegisterForDrag", "StartMoving", "StopMovingOrSizing", "ClearAllPoints", "SetAllPoints",
-    "SetFrameLevel", "SetSize", "SetScale", "EnableMouse", "SetClipsChildren", "SetRotation", "SetAlpha", "RegisterEvent"}) do
+    "SetFrameLevel", "SetSize", "SetScale", "EnableMouse", "SetClipsChildren", "SetRotation", "SetAlpha", "RegisterEvent",
+    "SetJustifyH"}) do
     object[name] = function() end
 end
 UIParent = newObject()
@@ -101,7 +105,7 @@ C_Spell = {GetSpellCooldown = function() return cooldown end,
     GetSpellInfo = function() return {castTime = 1500} end}
 DEFAULT_CHAT_FRAME = {AddMessage = function() end}
 SlashCmdList = {}
-load("Display.lua"); load("OzzySwingTimer.lua")
+load("Display.lua"); load("TestPanel.lua"); load("OzzySwingTimer.lua")
 local function event(name, ...) ns.driver.scripts.OnEvent(ns.driver, name, ...) end
 local function update(time) now = time; ns.driver.scripts.OnUpdate(ns.driver, 0.016) end
 test("TOC modules initialize with native UI calls", function()
@@ -164,5 +168,24 @@ test("debug log records session, marks, GCD and instant casts", function()
     assert(not ns.model.pending)
     SlashCmdList.OZZYSWINGTIMER("debug off")
     cooldown = {startTime = 0, duration = 0}; update(232)
+end)
+test("test panel buttons start a log, mark steps and count shots", function()
+    local panel = ns.panel
+    assert(not panel.frame.shown); SlashCmdList.OZZYSWINGTIMER("panel"); assert(panel.frame.shown)
+    local function click(label)
+        for _, child in ipairs(panel.buttons) do
+            if child.text == label then child.scripts.OnClick(child); return end
+        end
+        error("no button " .. label)
+    end
+    click("Ny logg"); assert(OzzySwingTimerDB.debug)
+    click("2 Steady röd")
+    local last = OzzySwingTimerDB.events[#OzzySwingTimerDB.events]
+    assert(last.event == "MARK" and last.note == "steady röd")
+    now = 240; event("UNIT_SPELLCAST_SUCCEEDED", "player", "p1", 75); panel:Refresh(true)
+    assert(panel.status.text:find("skott: 1"), panel.status.text)
+    assert(panel.instruction.text:find("blir röd"))
+    SlashCmdList.OZZYSWINGTIMER("debug off"); SlashCmdList.OZZYSWINGTIMER("panel")
+    assert(not panel.frame.shown)
 end)
 print(string.format("%d tests passed", passed))

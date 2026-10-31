@@ -184,6 +184,8 @@ local function command(message)
         settings.debug = rest == "on"
         if settings.debug then settings.events = {}; logSession() end
         say(settings.debug and "Diagnostik på, ny logg startad (senaste 1000 händelser sparas)." or "Diagnostik av.")
+    elseif cmd == "panel" then
+        ns.panel:Toggle()
     elseif cmd == "mark" then
         log("MARK", nil, {note = rest})
         say(settings.debug and ("Markering: " .. rest) or "Slå på diagnostik först: /ozs debug on")
@@ -193,7 +195,7 @@ local function command(message)
             version, build, model.phase, model.shots, model.speed, model.wind))
         say("Wind-up: " .. (ns.windSource or "okänd") .. ". GCD-API: " .. (model.gcdKnown and "tillgängligt" or "okänt"))
     else
-        say("/ozs test · unlock · lock · size 300 20 · scale 1 · status · debug on/off · mark <text> · windup auto/0.5 · reset")
+        say("/ozs test · panel · unlock · lock · size 300 20 · scale 1 · status · debug on/off · mark <text> · windup auto/0.5 · reset")
     end
 end
 
@@ -209,6 +211,7 @@ local function initialize()
     if not number(settings.windup) then settings.windup = nil end
     model, display = ns.Model:New(), ns.Display:New(settings)
     ns.model, ns.display = model, display
+    ns.panel = ns.TestPanel:New(settings)
     SlashCmdList.OZZYSWINGTIMER = command
     SLASH_OZZYSWINGTIMER1 = "/ozs"
     local _, class = UnitClass("player")
