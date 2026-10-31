@@ -1,4 +1,4 @@
-# Ozzy Swing Timer – TBC Classic 0.7.1
+# Ozzy Swing Timer – TBC Classic 0.8.0
 
 Första spelbara prototypen för **TBC Classic Anniversary 2.5.6**, Interface 20506.
 Själva addonmappen kräver inga bibliotek eller andra addons.
@@ -20,7 +20,9 @@ Om du redan är inloggad: prova `/reload`. Starta om klienten om den nya mappen 
 
 Baren har en enda siffra, förskjutningen till höger:
 
-Baren använder spelets egen castbar-ram, gnista och statusbar-textur.
+Baren använder spelets egen castbar-ram, gnista och statusbar-textur. Under den finns
+en castbar i halv höjd med spellens namn (syns när du castar) och en smal melee-swingtimer
+(syns när du slåss i närstrid, inklusive Raptor Strike).
 
 - **Weapon cooldown:** långsam guldfärgad fyllning från höger till vänster.
 - **Auto Shot wind-up, grön:** dags att trycka. Steady Shot köas till skottet, och dess GCD börjar redan vid trycket.

@@ -20,6 +20,7 @@ local COLORS = {
     out = {0.95, 0.20, 0.18},        -- wind-up out of phase, or blocked: failed-cast red
     lock = {0.30, 0.52, 1.00, 0.85}, -- cast/GCD occupancy
     stripe = {0.75, 0.86, 1.00, 0.45},
+    melee = {0.80, 0.80, 0.85},       -- melee swing timer: steel
     worth = {1.00, 0.82, 0.25},      -- delay that paid off
     cost = {1.00, 0.30, 0.25},       -- delay that cost DPS
 }
@@ -28,6 +29,21 @@ local function bar(parent, layer)
     local texture = parent:CreateTexture(nil, layer)
     texture:SetTexture(STATUSBAR)
     return texture
+end
+-- Slim secondary bar: dark 1 px edge, black background and a status bar fill.
+local function subBar(parent)
+    local f = CreateFrame("Frame", nil, parent)
+    local edge = f:CreateTexture(nil, "BACKGROUND")
+    edge:SetPoint("TOPLEFT", f, "TOPLEFT", -1, 1)
+    edge:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", 1, -1)
+    edge:SetColorTexture(0.32, 0.32, 0.30, 0.9)
+    local background = f:CreateTexture(nil, "BORDER")
+    background:SetAllPoints(f)
+    background:SetColorTexture(0, 0, 0, 0.75)
+    f.fill = bar(f, "ARTWORK")
+    f.fill:SetPoint("LEFT", f, "LEFT", 0, 0)
+    f:Hide()
+    return f
 end
 
 function Display:New(settings)
@@ -59,17 +75,16 @@ function Display:New(settings)
     top:SetAllPoints(frame)
     top:SetFrameLevel(frame:GetFrameLevel() + 3)
     ui.border = {}
+    -- All nine slices: the centre carries the metal lip that overlaps the bar's own edge.
     for row = 1, 3 do
         for col = 1, 3 do
-            if row ~= 2 or col ~= 2 then
-                local slice = top:CreateTexture(nil, "ARTWORK")
-                slice:SetTexture(BORDER)
-                local u = {0, SIDE, SIDE + CAST_W, BORDER_W}
-                local v = {0, BORDER_TOP, BORDER_TOP + CAST_H, BORDER_H}
-                slice:SetTexCoord(u[col] / BORDER_W, u[col + 1] / BORDER_W, v[row] / BORDER_H, v[row + 1] / BORDER_H)
-                slice.row, slice.col = row, col
-                ui.border[#ui.border + 1] = slice
-            end
+            local slice = top:CreateTexture(nil, "ARTWORK")
+            slice:SetTexture(BORDER)
+            local u = {0, SIDE, SIDE + CAST_W, BORDER_W}
+            local v = {0, BORDER_TOP, BORDER_TOP + CAST_H, BORDER_H}
+            slice:SetTexCoord(u[col] / BORDER_W, u[col + 1] / BORDER_W, v[row] / BORDER_H, v[row + 1] / BORDER_H)
+            slice.row, slice.col = row, col
+            ui.border[#ui.border + 1] = slice
         end
     end
     ui.spark = top:CreateTexture(nil, "OVERLAY")
@@ -79,6 +94,13 @@ function Display:New(settings)
     -- yellow when an extra spell caused it and it stays below break-even, red otherwise.
     ui.delay = top:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     ui.delay:Hide()
+    -- Below: a half-height cast bar with the spell name, then a thin melee swing timer.
+    ui.cast = subBar(frame)
+    tint(ui.cast.fill, COLORS.cooldown)
+    ui.castText = ui.cast:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    ui.castText:SetPoint("CENTER", ui.cast, "CENTER", 0, 0)
+    ui.melee = subBar(frame)
+    tint(ui.melee.fill, COLORS.melee)
 
     ui:Layout()
     return ui
@@ -103,6 +125,30 @@ function Display:Layout()
     self.delay:SetFont(FONT, math.max(11, math.floor(h * 0.8)), "OUTLINE")
     self.delay:ClearAllPoints()
     self.delay:SetPoint("LEFT", frame, "RIGHT", 6 + 8 * k, 0)
+    local castH, meleeH = math.max(6, math.floor(h / 2)), math.max(3, math.floor(h / 5))
+    self.cast:ClearAllPoints()
+    self.cast:SetPoint("TOP", frame, "BOTTOM", 0, -(4 + 6 * k))
+    self.cast:SetSize(w, castH)
+    self.cast.fill:SetHeight(castH)
+    self.castText:SetFont(FONT, math.max(8, castH - 2), "OUTLINE")
+    self.melee:ClearAllPoints()
+    self.melee:SetPoint("TOP", self.cast, "BOTTOM", 0, -3)
+    self.melee:SetSize(w, meleeH)
+    self.melee.fill:SetHeight(meleeH)
+end
+
+-- cast: {name = , progress = 0..1} or nil; melee: swing progress 0..1 or nil.
+function Display:PaintExtras(cast, melee)
+    local w = self.settings.width
+    if cast then
+        self.cast.fill:SetWidth(math.max(0.001, w * cast.progress))
+        self.castText:SetText(cast.name or "")
+        self.cast:Show()
+    else self.cast:Hide() end
+    if melee then
+        self.melee.fill:SetWidth(math.max(0.001, w * melee))
+        self.melee:Show()
+    else self.melee:Hide() end
 end
 
 function Display:Region(index)

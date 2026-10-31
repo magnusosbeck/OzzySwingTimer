@@ -4,6 +4,10 @@ local AUTO, GCD, STEADY = 75, 61304, 34120
 -- Steady Shot, Hunter's Mark and Serpent Sting (rank 1 stays known).
 local GCD_REFERENCES = {34120, 1130, 1978}
 local gcdSpell = GCD
+-- Raptor Strike replaces the next melee swing (all ranks).
+local RAPTOR = {[2973] = true, [14260] = true, [14261] = true, [14262] = true, [14263] = true,
+    [14264] = true, [14265] = true, [14266] = true, [27014] = true}
+local meleeLast
 local driver = CreateFrame("Frame")
 local model, display, settings, demo, lastView
 local learned, weaponID, nextPoll, nextSpeed = nil, nil, 0, 0
@@ -168,7 +172,23 @@ local function demoView(now)
     state:UpsertLock("cast", "preview", release, release + 1.5)
     state:UpsertLock("gcd", "preview", release + 1.5, release + 2.5)
     if t >= 2.3 then state:BeginWind(release + 2.3, false) end
-    return state:View(now, false)
+    local cast = t < 1.5 and {name = "Steady Shot", progress = t / 1.5} or nil
+    return state:View(now, false), cast, (elapsed % 2.6) / 2.6
+end
+
+-- The player's own cast or channel (not Auto Shot), for the cast bar.
+local function castInfo(now)
+    local name, _, _, startMS, endMS, _, _, _, spellID = UnitCastingInfo("player")
+    if not name and UnitChannelInfo then
+        name, _, _, startMS, endMS, _, _, spellID = UnitChannelInfo("player")
+    end
+    if not name or spellID == AUTO or not number(startMS) or not number(endMS) or endMS <= startMS then return nil end
+    return {name = name, progress = math.max(0, math.min(1, (now * 1000 - startMS) / (endMS - startMS)))}
+end
+local function meleeProgress(now)
+    local speed = UnitAttackSpeed and UnitAttackSpeed("player")
+    if not meleeLast or not number(speed) or speed <= 0 or now - meleeLast > speed + 1.5 then return nil end
+    return math.min(1, (now - meleeLast) / speed)
 end
 
 local function command(message)
@@ -259,12 +279,15 @@ local function initialize()
         end
         if now >= nextSpeed then nextSpeed = now + 0.2; refreshSpeed(now) end
         if demo then
-            display:Paint(demoView(now), true)
+            local view, cast, melee = demoView(now)
+            display:Paint(view, true); display:PaintExtras(cast, melee)
         else
             local isMoving = moving()
             model:Advance(now, isMoving)
             lastView = model:View(now, isMoving)
-            display:Paint(lastView)
+            local cast, melee = castInfo(now), meleeProgress(now)
+            display:Paint(lastView, cast ~= nil or melee ~= nil)
+            display:PaintExtras(cast, melee)
         end
     end)
 end
@@ -295,6 +318,10 @@ driver:SetScript("OnEvent", function(_, event, ...)
             CombatLogGetCurrentEventInfo()
         -- Only the player's own GUID: pet damage has its own source and is never logged.
         if source ~= UnitGUID("player") then return end
+        if subevent == "SWING_DAMAGE" or subevent == "SWING_MISSED" or
+            (RAPTOR[spellID] and (subevent == "SPELL_DAMAGE" or subevent == "SPELL_MISSED")) then
+            meleeLast = now
+        end
         if spellID == AUTO then
             if subevent == "SPELL_CAST_START" then windStart(now, "combatlog")
             elseif subevent == "SPELL_CAST_SUCCESS" then shot(now, "combatlog") end

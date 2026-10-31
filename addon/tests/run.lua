@@ -237,7 +237,7 @@ test("delay is painted red right of the bar with a decimal comma", function()
     assert(ns.display.delay.shown and ns.display.delay.text == "+0,8", tostring(ns.display.delay.text))
     ns.display:Paint({phase = "cooldown", fill = 0.5, cursor = 0.5, segments = {}})
     assert(not ns.display.delay.shown)
-    assert(#ns.display.border == 8)
+    assert(#ns.display.border == 9)
     SlashCmdList.OZZYSWINGTIMER("border 0,6"); near(OzzySwingTimerDB.border, 0.6)
     SlashCmdList.OZZYSWINGTIMER("border 5"); near(OzzySwingTimerDB.border, 0.6)
     SlashCmdList.OZZYSWINGTIMER("reset"); assert(OzzySwingTimerDB.border == nil)
@@ -264,5 +264,18 @@ test("damage log keeps only the player's own hits", function()
     assert(damage[1].spellID == 75 and damage[1].amount == 580 and not damage[1].crit)
     assert(damage[2].spellID == 34120 and damage[2].amount == 1170 and damage[2].crit)
     SlashCmdList.OZZYSWINGTIMER("debug off"); CombatLogGetCurrentEventInfo = nil
+end)
+test("cast bar shows the spell name and melee bar follows swings", function()
+    cast = {start = 300, finish = 301.5}; now = 300.75; update(300.75)
+    assert(ns.display.cast.shown and ns.display.castText.text == "Steady Shot")
+    cast = nil; update(301.6); assert(not ns.display.cast.shown)
+    UnitAttackSpeed = function() return 2.6 end
+    local hit
+    CombatLogGetCurrentEventInfo = function() return table.unpack(hit) end
+    hit = {0, "SWING_DAMAGE", false, "player-guid", "", 0, 0, "target", "", 0, 0, 120}
+    now = 302; event("COMBAT_LOG_EVENT_UNFILTERED"); update(303.3)
+    assert(ns.display.melee.shown and ns.display.frame.shown)
+    update(306.5); assert(not ns.display.melee.shown)
+    UnitAttackSpeed, CombatLogGetCurrentEventInfo = nil, nil
 end)
 print(string.format("%d tests passed", passed))
