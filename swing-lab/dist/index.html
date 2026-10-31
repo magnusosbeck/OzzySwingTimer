@@ -62,7 +62,7 @@
 </section>
 <aside class="panel settings"><p class="eyebrow">FÖRSÖKSINSTÄLLNINGAR</p><h2>Ändra förutsättningarna</h2>
 <div class="presets"><button id="presetMeasured" class="primary">Uppmätt TBC</button><button id="presetPrototype" class="quiet">Ursprungliga prototypvärden</button></div>
-<p class="hint">Uppmätt i TBC Anniversary 2.5.6 (2026-10-31): vapen 2,29 s, wind-up 0,36 s, GCD 1,50 s från knapptrycket, Steady Shot 1,15 s med haste.</p>
+<p class="hint">Uppmätt i TBC Anniversary 2.5.6 (2026-10-31): vapen 2,29 s, wind-up 0,36 s, GCD 1,50 s från knapptrycket, Steady Shot 1,11 s (grund 1,5 s, cirka 36 % ranged haste, samma som vapnet).</p>
 <label>Weapon speed <output id="intervalValue"></output><input id="interval" type="range" min="1.5" max="5" step="0.01" value="2.29"></label>
 <p class="hint">Intervallet mellan Auto Shots i simuleringen. Hela Auto Shot cycle, inklusive wind-up.</p>
 <label>Auto Shot wind-up <output id="windValue"></output><input id="wind" type="range" min="0.1" max="1" step="0.01" value="0.36"></label>
@@ -71,7 +71,7 @@
 <p class="hint">GCD hindrar nästa spell men blockerar inte Auto Shot i sig i denna modell.</p>
 <label>När startar GCD?<select id="gcdStart"><option value="press" selected>Vid knapptrycket (uppmätt i TBC)</option><option value="cast">Vid caststart (ursprunglig modell)</option></select></label>
 <p class="hint">Uppmätt: en cast som köas under wind-up startar vid skottet, men dess GCD löper redan från trycket.</p>
-<label>Spell cast <output id="durationValue"></output><input id="duration" type="range" min="0.5" max="3" step="0.01" value="1.15"></label>
+<label>Spell cast <output id="durationValue"></output><input id="duration" type="range" min="0.5" max="3" step="0.01" value="1.11"></label>
 <p class="hint">Castspellens casttid, till exempel Steady Shot. InstaCast har ingen casttid.</p>
 <label>Uppspelningshastighet<select id="speed"><option value="0.25">0,25× · detaljstudie</option><option value="0.5">0,5× · långsamt</option><option value="1" selected>1× · normal</option><option value="2">2× · snabbt</option><option value="5">5× · mycket snabbt</option></select></label>
 <p class="hint">Hastigheten ändrar bara hur fort simulerad tid går. DPS räknas per simulerad sekund.</p>

@@ -68,7 +68,7 @@ hoppar med cirka ±0,08 s. Det tyder på att servern hanterar händelser i steg 
 **Tryck under wind-up (17 av 17 fall).** Steady Shot som trycks under wind-up skickas
 (`UNIT_SPELLCAST_SENT`) och startar i samma bildruta som Auto Shot avfyras. Skottet avbryts
 inte. Ibland rapporteras samtidigt "Another action is in progress" för Auto Shot, men
-skottet går ändå. Steady Shot-casten tog cirka 1,15 s med denna haste.
+skottet går ändå. Steady Shot-casten var 1,106 s enligt `UnitCastingInfo` (grund 1,5 s). Ranged haste cirka 36 % påverkar både vapnet (2,286 s) och Steady Shot lika mycket.
 
 **Kostnad per cykel** (medelintervall, jämfört med 2,31 s för ren Auto Shot):
 

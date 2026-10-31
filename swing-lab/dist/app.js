@@ -18,7 +18,7 @@ function text(id, value) {
 const sim = new Simulation();
 // Measured in TBC Anniversary 2.5.6 (docs/timing-design.md); prototype = the original dummy values.
 const PRESETS = {
-  measured: {interval: 2.29, wind: 0.36, gcd: 1.5, duration: 1.15, gcdStart: 'press'},
+  measured: {interval: 2.29, wind: 0.36, gcd: 1.5, duration: 1.11, gcdStart: 'press'},
   prototype: {interval: 2.8, wind: 0.5, gcd: 1, duration: 1.5, gcdStart: 'cast'}
 };
 let selectedHandle = 'cast';
