@@ -215,10 +215,11 @@ local function command(message)
         say(demo and "Testläge på. /ozs test avslutar." or "Testläge av.")
     elseif cmd == "lock" or cmd == "unlock" then
         settings.locked = cmd == "lock"; display:Layout()
-        say(settings.locked and "Baren är låst." or "Dra baren med vänster musknapp. /ozs lock låser.")
+        say(settings.locked and "Baren är låst." or
+            "Dra huvudbaren, castbaren, melee-baren eller bubblan med vänster musknapp. /ozs lock låser.")
     elseif cmd == "reset" then
         for key, value in pairs(defaults) do settings[key] = value end
-        settings.windup, settings.border, settings.badge = nil, nil, nil; display:Layout()
+        settings.windup, settings.border, settings.badge, settings.parts = nil, nil, nil, nil; display:Layout()
     elseif cmd == "size" then
         local width, height = rest:match("^(%d+)%s+(%d+)$")
         width, height = tonumber(width), tonumber(height)

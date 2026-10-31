@@ -26,6 +26,7 @@ local DRAGON = {elite = "Interface\\TargetingFrame\\UI-TargetingFrame-Elite",
     rare = "Interface\\TargetingFrame\\UI-TargetingFrame-Rare"}
 local ELITE_LEFT, ELITE_CX, ELITE_CY, ELITE_W, ELITE_H = 136, 175, 42, 256, 100
 local FALLBACK_ICON = "Interface\\Icons\\INV_Weapon_Bow_07"
+local WHITE = "Interface\\Buttons\\WHITE8X8"
 Display.BADGES = {button = true, ring = true, elite = true, rare = true}
 Display.BORDER = 0.8
 
@@ -106,8 +107,9 @@ function Display:New(settings)
     ui.spark = top:CreateTexture(nil, "OVERLAY")
     ui.spark:SetTexture(SPARK)
     ui.spark:SetBlendMode("ADD")
-    -- Auto Shot badge right of the bar. On a delayed shot the icon greys, its ornament turns
-    -- yellow (paid off, below break-even) or red (cost DPS) and the delay shows on it, e.g. "+0,8".
+    -- Auto Shot badge right of the bar: a black bubble (the icon only in button style). On a delayed
+    -- shot its ornament turns yellow (paid off, below break-even) or red (cost DPS) and the delay
+    -- shows on it, e.g. "+0,8".
     ui.badge = CreateFrame("Frame", nil, frame)
     ui.badge:SetFrameLevel(frame:GetFrameLevel() + 4)
     ui.icon = ui.badge:CreateTexture(nil, "ARTWORK")
@@ -133,6 +135,21 @@ function Display:New(settings)
     ui.melee:SetFrameLevel(frame:GetFrameLevel() + 4)
     tint(ui.melee.fill, COLORS.melee)
 
+    -- Unlocked, each part can be dragged on its own; its offset from the main bar's centre is saved.
+    for key, part in pairs({cast = ui.cast, melee = ui.melee, badge = ui.badge}) do
+        part:SetMovable(true)
+        part:RegisterForDrag("LeftButton")
+        part:SetScript("OnDragStart", function(self) if not settings.locked then self:StartMoving() end end)
+        part:SetScript("OnDragStop", function(self)
+            self:StopMovingOrSizing()
+            local x, y = self:GetCenter()
+            local frameX, frameY = frame:GetCenter()
+            settings.parts = settings.parts or {}
+            settings.parts[key] = {x = x - frameX, y = y - frameY}
+            ui:Layout()
+        end)
+    end
+
     ui:Layout()
     return ui
 end
@@ -154,19 +171,24 @@ function Display:Layout()
     end
     self.spark:SetSize(32 * h / CAST_H, 32 * h / CAST_H)
     local icon = math.floor(h * 1.6)
-    self.badge:ClearAllPoints()
-    self.badge:SetPoint("LEFT", frame, "RIGHT", 6 + 10 * k, 0)
+    local parts = settings.parts or {}
+    local function place(part, key, point, relative, relativePoint, x, y)
+        part:ClearAllPoints()
+        local saved = parts[key]
+        if saved then part:SetPoint("CENTER", frame, "CENTER", saved.x, saved.y)
+        else part:SetPoint(point, relative, relativePoint, x, y) end
+        part:EnableMouse(not settings.locked)
+    end
+    place(self.badge, "badge", "LEFT", frame, "RIGHT", 6 + 10 * k, 0)
     self.badge:SetSize(icon, icon)
     self:BadgeStyle(settings.badge or "rare", icon)
     self.delay:SetFont(FONT, math.max(10, math.floor(icon * 0.42)), "OUTLINE")
     local castH, meleeH = math.max(6, math.floor(h / 2)), math.max(3, math.floor(h / 5))
-    self.cast:ClearAllPoints()
-    self.cast:SetPoint("TOP", frame, "BOTTOM", 0, -(2 + 3 * k))
+    place(self.cast, "cast", "TOP", frame, "BOTTOM", 0, -(2 + 3 * k))
     self.cast:SetSize(w, castH)
     self.cast.fill:SetHeight(castH)
     self.castText:SetFont(FONT, math.max(8, castH - 2), "OUTLINE")
-    self.melee:ClearAllPoints()
-    self.melee:SetPoint("TOP", self.cast, "BOTTOM", 0, -3)
+    place(self.melee, "melee", "TOP", self.cast, "BOTTOM", 0, -3)
     self.melee:SetSize(w, meleeH)
     self.melee.fill:SetHeight(meleeH)
 end
@@ -176,13 +198,15 @@ function Display:BadgeStyle(style, s)
     local icon, ornament = self.icon, self.ornament
     ornament:ClearAllPoints()
     ornament:SetTexCoord(0, 1, 0, 1)
-    if style == "button" or not SetPortraitToTexture then
+    if style == "button" then
         icon:SetTexture(self.iconPath)
         icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+        icon:SetVertexColor(1, 1, 1, 1)
     else
-        -- Round portrait-style icon inside the ring or dragon.
-        SetPortraitToTexture(icon, self.iconPath)
+        -- A black round bubble inside the ring or dragon; the number sits on it.
+        if SetPortraitToTexture then SetPortraitToTexture(icon, WHITE) else icon:SetTexture(WHITE) end
         icon:SetTexCoord(0, 1, 0, 1)
+        icon:SetVertexColor(0, 0, 0, 1)
     end
     if style == "button" then
         ornament:SetTexture(SLOT)
@@ -208,8 +232,13 @@ function Display:BadgeStyle(style, s)
 end
 
 -- cast: {name = , progress = 0..1} or nil; melee: swing progress 0..1 or nil.
+-- Unlocked, both are shown as samples so they can be dragged into place.
 function Display:PaintExtras(cast, melee)
     local w = self.settings.width
+    if not self.settings.locked then
+        cast = cast or {name = "Castbar", progress = 0.6}
+        melee = melee or 0.4
+    end
     if cast then
         self.cast.fill:SetWidth(math.max(0.001, w * cast.progress))
         self.castText:SetText(cast.name or "")
@@ -295,5 +324,5 @@ function Display:Paint(view, forceVisible)
         self.icon:SetDesaturated(false)
     end
     -- The badge belongs to the running timer, not to an idle bar shown for casting or melee only.
-    if view.phase == "idle" then self.badge:Hide() else self.badge:Show() end
+    if view.phase == "idle" and self.settings.locked then self.badge:Hide() else self.badge:Show() end
 end
