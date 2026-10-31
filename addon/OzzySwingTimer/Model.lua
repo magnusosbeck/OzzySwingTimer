@@ -223,6 +223,7 @@ function Model:View(now, moving)
         return {phase = "wind", fill = p, cursor = p, green = self:InPhase(moving), segments = {},
             delay = self.lastDelay, delayWorthIt = self.delayWorthIt}
     end
+    -- Before the first shot of a run (opening, still moving) waiting is normal, not a warning.
     return {phase = "blocked", fill = 1, cursor = 0, segments = self:Segments(), delay = self.lastDelay,
-        delayWorthIt = self.delayWorthIt}
+        delayWorthIt = self.delayWorthIt, opening = not self.continuous}
 end

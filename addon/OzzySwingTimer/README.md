@@ -1,4 +1,4 @@
-# Ozzy Swing Timer – TBC Classic 0.10.0
+# Ozzy Swing Timer – TBC Classic 0.11.0
 
 Första spelbara prototypen för **TBC Classic Anniversary 2.5.6**, Interface 20506.
 Själva addonmappen kräver inga bibliotek eller andra addons.
@@ -27,7 +27,7 @@ en castbar i halv höjd med spellens namn (syns när du castar) och en smal mele
 - **Weapon cooldown:** långsam guldfärgad fyllning från höger till vänster.
 - **Auto Shot wind-up, grön:** dags att trycka. Steady Shot köas till skottet, och dess GCD börjar redan vid trycket.
 - **Auto Shot wind-up, röd:** ur fas. Cast eller GCD hänger kvar över wind-up. Tryck inget, låt ett orört Auto Shot gå för att komma i takt igen.
-- **Auto Shot-bubbla till höger**: rund ikon i guldring, eller med drake (`/ozs badge ring | elite | rare | button`). Vid förskjutet skott blir ikonen grå, ornamentet gult eller rött och siffran visas, t.ex. **+0,8**: hur många sekunder det senaste Auto Shot försköts jämfört med en ostörd cykel. **Gul** när en extra spell (allt utom Steady Shot som startar GCD, t.ex. Arcane) användes inom två cykler och förskjutningen är under brytpunkten (`/ozs breakeven`, standard 1,3 s): den lönade sig. **Röd** annars: den kostade DPS. Visas från 0,15 s, eftersom skotten varierar cirka ±0,1 s även utan clipping. Försvinner när ett skott kommer i tid.
+- **Auto Shot-bubbla till höger**: rund ikon med silverdrake som standard, eller guldring, gulddrake eller action-knapp (`/ozs badge rare | ring | elite | button`). Vid förskjutet skott blir ikonen grå, ornamentet gult eller rött och siffran visas, t.ex. **+0,8**: hur många sekunder det senaste Auto Shot försköts jämfört med en ostörd cykel. **Gul** när en extra spell (allt utom Steady Shot som startar GCD, t.ex. Arcane) användes inom två cykler och förskjutningen är under brytpunkten (`/ozs breakeven`, standard 1,3 s): den lönade sig. **Röd** annars: den kostade DPS. Visas från 0,15 s, eftersom skotten varierar cirka ±0,1 s även utan clipping. Försvinner när ett skott kommer i tid.
 - **Blå diagonal markering:** faktisk spell cast och GCD tillsammans. Överlapp räknas en gång; GCD som fortsätter in i nästa cykel visas där också.
 
 ## Kommandon
@@ -38,7 +38,7 @@ en castbar i halv höjd med spellens namn (syns när du castar) och en smal mele
 | `/ozs size 300 20` | Bredd och höjd |
 | `/ozs scale 1` | Skala 0.5–3 |
 | `/ozs border 0.8` | Ramens tjocklek 0.4–2 (1 = som spelets castbar) |
-| `/ozs badge ring` | Auto Shot-bubblans stil: ring, elite (gulddrake), rare (silverdrake), button |
+| `/ozs badge ring` | Auto Shot-bubblans stil: rare (silverdrake, standard), ring, elite (gulddrake), button |
 | `/ozs status` | Klientversion, skott, timing och GCD-status i chatten |
 | `/ozs windup auto` | Uppskatta wind-up och lär från observerad skottstart |
 | `/ozs windup 0.5` | Manuell wind-up i sekunder, vid kalibrering |

@@ -8,6 +8,18 @@ local gcdSpell = GCD
 local RAPTOR = {[2973] = true, [14260] = true, [14261] = true, [14262] = true, [14263] = true,
     [14264] = true, [14265] = true, [14266] = true, [27014] = true}
 local meleeLast
+-- Off-GCD spells never count as an extra GCD spell. Used when GetSpellBaseCooldown is unavailable:
+-- Kill Command, Rapid Fire, Readiness, Bestial Wrath, Berserking, Blood Fury, Arcane Torrent.
+local OFF_GCD = {[34026] = true, [3045] = true, [23989] = true, [19574] = true, [26296] = true,
+    [26297] = true, [20554] = true, [20572] = true, [33697] = true, [28730] = true, [25046] = true}
+local function triggersGCD(spellID)
+    if OFF_GCD[spellID] then return false end
+    if GetSpellBaseCooldown then
+        local ok, _, gcdMS = pcall(GetSpellBaseCooldown, spellID)
+        if ok and type(gcdMS) == "number" then return gcdMS > 0 end
+    end
+    return true
+end
 local driver = CreateFrame("Frame")
 local model, display, settings, demo, lastView
 local learned, weaponID, nextPoll, nextSpeed = nil, nil, 0, 0
@@ -367,7 +379,8 @@ driver:SetScript("OnEvent", function(_, event, ...)
                 readGCD(now)
                 -- Extra spell: anything but Steady Shot whose GCD began at its press (up to ~0.5 s before
                 -- it was sent, as observed). Off-GCD pet commands such as Kill Command do not count.
-                local extra = spellID ~= STEADY and model.gcdStart > 0 and now - model.gcdStart <= 0.6
+                local extra = spellID ~= STEADY and triggersGCD(spellID) and
+                    model.gcdStart > 0 and now - model.gcdStart <= 0.6
                 if extra then model:ExtraSpell(now) end
                 log("CAST_SUCCESS", spellID, {extra = extra or nil})
             end

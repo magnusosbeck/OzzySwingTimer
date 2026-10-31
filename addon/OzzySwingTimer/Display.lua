@@ -33,6 +33,7 @@ local COLORS = {
     cooldown = {0.95, 0.72, 0.18},   -- slow phase: casting-bar gold
     ready = {0.25, 0.90, 0.30},      -- wind-up, press now: channel green
     out = {0.95, 0.20, 0.18},        -- wind-up out of phase, or blocked: failed-cast red
+    waiting = {0.50, 0.50, 0.52},    -- blocked before the first shot of a run: neutral grey
     lock = {0.30, 0.52, 1.00, 0.85}, -- cast/GCD occupancy
     stripe = {0.75, 0.86, 1.00, 0.45},
     melee = {0.80, 0.80, 0.85},       -- melee swing timer: steel
@@ -156,7 +157,7 @@ function Display:Layout()
     self.badge:ClearAllPoints()
     self.badge:SetPoint("LEFT", frame, "RIGHT", 6 + 10 * k, 0)
     self.badge:SetSize(icon, icon)
-    self:BadgeStyle(settings.badge or "ring", icon)
+    self:BadgeStyle(settings.badge or "rare", icon)
     self.delay:SetFont(FONT, math.max(10, math.floor(icon * 0.42)), "OUTLINE")
     local castH, meleeH = math.max(6, math.floor(h / 2)), math.max(3, math.floor(h / 5))
     self.cast:ClearAllPoints()
@@ -243,7 +244,7 @@ function Display:Paint(view, forceVisible)
     else self.fill:SetPoint("LEFT", self.frame, "LEFT", 0, 0) end
     self.fill:SetSize(math.max(0.001, width * view.fill), height)
     if view.phase == "wind" then tint(self.fill, view.green and COLORS.ready or COLORS.out)
-    elseif view.phase == "blocked" then tint(self.fill, COLORS.out)
+    elseif view.phase == "blocked" then tint(self.fill, view.opening and COLORS.waiting or COLORS.out)
     else tint(self.fill, COLORS.cooldown) end
 
     local visible = 0
