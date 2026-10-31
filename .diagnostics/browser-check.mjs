@@ -58,7 +58,12 @@ try {
   if(redColor!=='rgb(239, 105, 105)')throw new Error('Wind-up should be red when GCD hangs over it');
   const status=await evaluate(`document.getElementById('hudWindupWindowValue').textContent`);
   if(status!=='Ur fas')throw new Error('Status should say out of phase, got '+status);
-  const windupResult={status};
+  // Steady at sim 10.5 s ends 12.0 s, past the 11.2 s wind-up start: the 11.7 s shot slips to 12.5 s (+0,8).
+  await evaluate(`window.__advance(14100);document.getElementById('cast').click();window.__advance(16300)`);
+  const delayText=await evaluate(`document.getElementById('pendulumDelay').textContent`);
+  const delayColor=await evaluate(`getComputedStyle(document.getElementById('pendulumDelay')).color`);
+  if(delayText!=='+0,8'||delayColor!=='rgb(239, 105, 105)')throw new Error('Delayed Auto Shot should show red +x,x right of the bar, got '+delayText);
+  const windupResult={status,delayText};
   console.log(JSON.stringify({windupResult,greenColor,queuedColor,redColor,animations}));
   const windupShot=await send('Page.captureScreenshot',{format:'png',captureBeyondViewport:false,clip:bounds},sessionId);
   writeFileSync('.diagnostics/windup-window.png',Buffer.from(windupShot.data,'base64'));

@@ -40,7 +40,7 @@ There is no test filter; `addon/tests/run.lua` is a single script of `test(name,
 Load order (from the `.toc`): `Model.lua` → `Display.lua` → `OzzySwingTimer.lua`. Files share state through the addon namespace (`local _, ns = ...`; `ns.Model`, `ns.Display`, and at runtime `ns.model`/`ns.display`).
 
 - **Model.lua** — pure timing state machine, no WoW API calls. Phases: weapon cooldown (slow fill right→left), wind-up (fast fill left→right), `blocked`. Tracks cast and GCD "locks" and renders their **union** (not sum) as `Segments()`, including GCD carried into the next cycle. `InPhase()` makes wind-up green ("press now") when every lock that started before the wind-up ends by the shot, and red ("out of phase, let one Auto Shot pass untouched") otherwise; a GCD started by a press during the wind-up is ignored. There is no flash or queue-window frame by design. `View(now)` produces what the display paints.
-- **Display.lua** — WoW frame/texture construction and `Paint(view, forceVisible)`. In-game bar shows no text or numbers by design.
+- **Display.lua** — WoW frame/texture construction and `Paint(view, forceVisible)`. In-game bar shows no text by design, only a red "+0,8"-style Auto Shot delay right of the bar (from `Model.DELAY_THRESHOLD`, 0.15 s, above measured jitter).
 - **OzzySwingTimer.lua** — event wiring, `/ozs` slash command (`SlashCmdList.OZZYSWINGTIMER`), SavedVariables `OzzySwingTimerDB`, debug log (last 200 events), and test/demo mode.
 
 Key modeling rules to preserve (see addon README for detail):

@@ -52,6 +52,8 @@ function render(readouts = true) {
   fill.style.transformOrigin = pendulum.origin;
   fill.style.background = pendulum.color;
   cursor.style.transform = `translateX(${pendulum.cursor * 100}%)`;
+  // Red delay of the last Auto Shot, one decimal, right of the bar.
+  text('pendulumDelay', sim.delay >= 0.05 ? '+' + number(sim.delay, 1) : '');
   if (readouts) renderWindupStatus(sim);
   if (readouts) {
     const budget = actionBudget(sim);

@@ -1,4 +1,4 @@
-# Ozzy Swing Timer – TBC Classic 0.3.0
+# Ozzy Swing Timer – TBC Classic 0.4.0
 
 Första spelbara prototypen för **TBC Classic Anniversary 2.5.6**, Interface 20506.
 Själva addonmappen kräver inga bibliotek eller andra addons.
@@ -18,11 +18,12 @@ Om du redan är inloggad: prova `/reload`. Starta om klienten om den nya mappen 
 - `/ozs lock` låser baren. Den döljs då när Auto Shot är avstängt.
 - Skjut Auto Shot mot ett mål, och prova sedan Steady Shot under den snabba fasen.
 
-Baren innehåller inga texter eller sekundvärden:
+Baren har en enda siffra, den röda förskjutningen till höger:
 
 - **Weapon cooldown:** långsam fyllning från höger till vänster.
 - **Auto Shot wind-up, grön:** dags att trycka. Steady Shot köas till skottet, och dess GCD börjar redan vid trycket.
 - **Auto Shot wind-up, röd:** ur fas. Cast eller GCD hänger kvar över wind-up. Tryck inget, låt ett orört Auto Shot gå för att komma i takt igen.
+- **Röd siffra till höger, t.ex. +0,8:** hur många sekunder det senaste Auto Shot försköts jämfört med en ostörd cykel. Visas från 0,15 s, eftersom skotten varierar cirka ±0,1 s även utan clipping. Försvinner när ett skott kommer i tid.
 - **Blå diagonal markering:** faktisk spell cast och GCD tillsammans. Överlapp räknas en gång; GCD som fortsätter in i nästa cykel visas där också.
 
 ## Kommandon

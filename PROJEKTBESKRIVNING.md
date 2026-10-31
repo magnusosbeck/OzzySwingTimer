@@ -45,9 +45,11 @@ Grunden är en pendelbar:
 4. Wind-up är **röd** när spelaren är ur fas, alltså när cast eller GCD hänger kvar över wind-up. Då ska spelaren inte trycka utan låta ett orört Auto Shot gå för att komma i takt igen.
 5. En **blå diagonal markering** visar hur mycket av Weapon cooldown som upptas av cast/GCD, så att spelaren grovt ser hur mycket tid som är kvar för en spell till. Om en spärr fortsätter in i nästa cykel visas den där också.
 
+6. En **röd siffra till höger** om baren, till exempel **+0,8**, visar hur mycket det senaste Auto Shot försköts. Den syns bara när skottet faktiskt kom för sent.
+
 Målet (2026-10-31): få plats med en Steady Shot och en instant i den långsamma fasen utan att Auto Shot skjuts upp. Om det får plats beror på vapnet och haste. Flashen och den turkosa ramen är borttagna (0.3.0); signalen ska gå att läsa i ögonvrån.
 
-Spelversionen visar bara baren och dess innehåll, utan fasnamn eller sekundvärden. Mer detaljerad information hör hemma i simulatorn eller diagnostiken.
+Spelversionen visar bara baren och förskjutningssiffran, utan fasnamn eller andra sekundvärden. Mer detaljerad information hör hemma i simulatorn eller diagnostiken.
 
 ## Vad vi har byggt hittills
 

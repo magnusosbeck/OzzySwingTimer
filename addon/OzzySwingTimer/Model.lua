@@ -6,6 +6,8 @@ ns.Model = Model
 local EPS = 0.0001
 -- No real Auto Shot follows another this fast; closer reports are duplicates.
 Model.MIN_SHOT_GAP = 0.5
+-- Shot-to-shot jitter without clipping was about ±0.1 s in TBC 2.5.6; smaller delays are noise.
+Model.DELAY_THRESHOLD = 0.15
 local min, max = math.min, math.max
 local function clamp(value, low, high) return max(low, min(high, value)) end
 
@@ -22,12 +24,14 @@ function Model:Reset()
     self.castStart, self.castEnd, self.castKey = 0, 0, nil
     self.gcdStart, self.gcdEnd, self.gcdKnown = 0, 0, false
     self.locks, self.shots = {}, 0
+    self.lastDelay, self.continuous = nil, false
     self.retryAt, self.waitingForShot = 0, false
 end
 
 function Model:Stop()
     self.active, self.phase = false, "idle"
     self.observedWindStart, self.waitingForShot = nil, false
+    self.continuous = false
 end
 
 function Model:SetTiming(speed, wind, now)
@@ -122,6 +126,10 @@ end
 
 function Model:Shot(now)
     if self.lastShot and now - self.lastShot < Model.MIN_SHOT_GAP then return false end
+    -- Delay versus an undisturbed cycle; only between shots of one continuous Auto Shot run.
+    local delay = self.continuous and self.lastShot and now - self.lastShot - self.speed
+    self.lastDelay = delay and delay >= Model.DELAY_THRESHOLD and delay < self.speed and delay or nil
+    self.continuous = true
     self.shots = self.shots + 1
     self.active, self.phase = true, "cooldown"
     self.lastShot, self.cooldownStart = now, now
@@ -192,11 +200,12 @@ function Model:View(now, moving)
     if self.phase == "idle" then return {phase = "idle", fill = 0, cursor = 1, segments = {}} end
     if self.phase == "cooldown" then
         local p = clamp((now - self.cooldownStart) / (self.cooldownEnd - self.cooldownStart), 0, 1)
-        return {phase = "cooldown", fill = p, cursor = 1 - p, segments = self:Segments()}
+        return {phase = "cooldown", fill = p, cursor = 1 - p, segments = self:Segments(), delay = self.lastDelay}
     end
     if self.phase == "wind" then
         local p = clamp((now - self.windStart) / (self.windEnd - self.windStart), 0, 1)
-        return {phase = "wind", fill = p, cursor = p, green = self:InPhase(moving), segments = {}}
+        return {phase = "wind", fill = p, cursor = p, green = self:InPhase(moving), segments = {},
+            delay = self.lastDelay}
     end
-    return {phase = "blocked", fill = 1, cursor = 0, segments = self:Segments()}
+    return {phase = "blocked", fill = 1, cursor = 0, segments = self:Segments(), delay = self.lastDelay}
 end

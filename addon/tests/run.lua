@@ -66,6 +66,13 @@ test("duplicate Auto Shot events are ignored", function()
     local m = fresh(); assert(m:Shot(10)); assert(not m:Shot(10.01))
     assert(not m:Shot(10.215)); assert(m.shots == 1)
 end)
+test("delayed shot reports its delay, noise and restarts do not", function()
+    local m = fresh(); m:Shot(10); assert(m:View(10.1).delay == nil)
+    m:Shot(12.9); assert(m:View(13).delay == nil)
+    m:Shot(16.5); near(m:View(16.6).delay, 0.8)
+    m:Shot(19.3); assert(m:View(19.4).delay == nil)
+    m:Stop(); m:Shot(30); assert(m:View(30.1).delay == nil)
+end)
 test("haste preserves fractional weapon cooldown progress", function()
     local m = fresh(); m:Shot(10); m:SetTiming(1.4, 0.25, 11.15)
     near(m:View(11.15).cursor, 0.5)
@@ -88,7 +95,7 @@ function object:Hide() self.shown = false end
 for _, name in ipairs({"SetColorTexture", "SetWidth", "SetHeight", "SetFrameStrata", "SetClampedToScreen",
     "SetMovable", "RegisterForDrag", "StartMoving", "StopMovingOrSizing", "ClearAllPoints", "SetAllPoints",
     "SetFrameLevel", "SetSize", "SetScale", "EnableMouse", "SetClipsChildren", "SetRotation", "SetAlpha", "RegisterEvent",
-    "SetJustifyH"}) do
+    "SetJustifyH", "SetTextColor"}) do
     object[name] = function() end
 end
 UIParent = newObject()
@@ -205,5 +212,11 @@ test("GCD is read from a known no-cooldown spell, not 61304", function()
     C_Spell.GetSpellCooldown = function() return {startTime = 252, duration = 6, modRate = 1} end
     now = 252.1; update(252.1); assert(ns.model.gcdEnd == 0)
     IsPlayerSpell = nil; C_Spell.GetSpellCooldown = function() return cooldown end
+end)
+test("delay is painted red right of the bar with a decimal comma", function()
+    ns.display:Paint({phase = "cooldown", fill = 0.5, cursor = 0.5, segments = {}, delay = 0.84})
+    assert(ns.display.delay.shown and ns.display.delay.text == "+0,8", tostring(ns.display.delay.text))
+    ns.display:Paint({phase = "cooldown", fill = 0.5, cursor = 0.5, segments = {}})
+    assert(not ns.display.delay.shown)
 end)
 print(string.format("%d tests passed", passed))

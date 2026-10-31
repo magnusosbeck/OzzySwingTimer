@@ -117,3 +117,6 @@
 @media(max-width:530px) { .auto-heading { align-items:flex-start; flex-direction:column; } }
 
 .presets{display:flex;flex-wrap:wrap;gap:8px;margin:4px 0 8px}
+.pendulum-row{display:flex;align-items:center;gap:8px}
+.pendulum-row .pendulum-track{flex:1}
+.pendulum-delay{min-width:3.2em;color:#ef6969;font-weight:600;font-size:13px;font-variant-numeric:tabular-nums}

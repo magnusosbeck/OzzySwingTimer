@@ -50,6 +50,11 @@ function Display:New(settings)
     cursorFrame:SetFrameLevel(frame:GetFrameLevel() + 3)
     ui.cursor = cursorFrame:CreateTexture(nil, "OVERLAY")
     color(ui.cursor, 1, 0.98, 0.90)
+    -- Red Auto Shot delay of the last shot, right of the bar, e.g. "+0,8".
+    ui.delay = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    ui.delay:SetPoint("LEFT", frame, "RIGHT", 6, 0)
+    ui.delay:SetTextColor(1, 0.35, 0.35)
+    ui.delay:Hide()
 
     ui:Layout()
     return ui
@@ -122,5 +127,9 @@ function Display:Paint(view, forceVisible)
     self.cursor:SetPoint("CENTER", self.frame, "LEFT", 2 + view.cursor * width, 0)
     self.cursor:SetSize(2, height)
     if view.phase == "idle" then self.cursor:Hide() else self.cursor:Show() end
+    if view.delay then
+        self.delay:SetText((string.format("+%.1f", view.delay):gsub("%.", ",")))
+        self.delay:Show()
+    else self.delay:Hide() end
 
 end
