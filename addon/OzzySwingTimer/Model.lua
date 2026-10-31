@@ -145,6 +145,9 @@ end
 
 function Model:AutoFailed(now)
     if not self.active then return end
+    -- Observed in TBC 2.5.6: pressing a spell during an observed wind-up reports a failure,
+    -- yet the shot still fires. Advance() blocks if no release follows.
+    if self.phase == "wind" and self.observedWindStart then return end
     -- A failed attempt during cooldown does not erase the weapon's cooldown.
     self.retryAt = now + 0.5
     if self.phase ~= "cooldown" then

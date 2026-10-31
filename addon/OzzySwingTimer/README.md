@@ -1,4 +1,4 @@
-# Ozzy Swing Timer – TBC Classic 0.2.0
+# Ozzy Swing Timer – TBC Classic 0.2.1
 
 Första spelbara prototypen för **TBC Classic Anniversary 2.5.6**, Interface 20506.
 Själva addonmappen kräver inga bibliotek eller andra addons.
@@ -76,8 +76,8 @@ Inga spells kastas automatiskt av addonen.
 
 Lua-modellen och händelsekopplingen testas med simulerade WoW-API:er i
 `addon/tests/run.lua`. Skott, vapenintervall, wind-up och köning av Steady Shot
-har mätts i spelklienten (se `docs/timing-design.md`). GCD-läsningen och den nya
-flash-regeln är ännu inte provade i spelet. Testprotokollet finns i `/ozs panel`.
+har mätts i spelklienten (se `docs/timing-design.md`), liksom GCD-läsningen och
+flash-regeln (0.2.0). Testprotokollet finns i `/ozs panel`.
 Forever-portningen kommer senare.
 
 API-underlag: [Blizzards genererade Spell-API för Anniversary](https://github.com/Gethe/wow-ui-source/blob/classic_anniversary/Interface/AddOns/Blizzard_APIDocumentationGenerated/SpellDocumentation.lua)

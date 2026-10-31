@@ -117,11 +117,11 @@ end
 local function castTime(spellID)
     if C_Spell and C_Spell.GetSpellInfo then
         local info = C_Spell.GetSpellInfo(spellID)
-        if info and number(info.castTime) then return info.castTime end
+        if info and number(info.castTime) then return math.max(0, info.castTime) end
     end
     if GetSpellInfo then
         local _, _, _, duration = GetSpellInfo(spellID)
-        if number(duration) then return duration end
+        if number(duration) then return math.max(0, duration) end
     end
     return 0
 end
@@ -134,7 +134,10 @@ local function windStart(now, source)
 end
 local function shot(now, source)
     if model.lastShot and now - model.lastShot < ns.Model.MIN_SHOT_GAP then
-        log("AUTO_DUPLICATE", AUTO, {source = source, sinceLastShot = now - model.lastShot})
+        -- UNIT and combat-log both report every release; only log the suspicious gaps.
+        if now - model.lastShot > 0.08 then
+            log("AUTO_DUPLICATE", AUTO, {source = source, sinceLastShot = now - model.lastShot})
+        end
         return
     end
     local measured

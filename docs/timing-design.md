@@ -82,9 +82,38 @@ vilket kan lägga till fördröjning efter castens slut. Arcane Shots effekt är
 
 **Rörelse.** Steg under cast eller wind-up gav "Interrupted" för både Steady Shot och Auto Shot.
 
-**Inte mätt än:** Steady i den gröna zonen jämfört med den röda, rotation Steady + Arcane,
-Aimed Shot (en tidigare logg visade cirka 2,2 s till nästa skottstart efter Aimed Shot),
-GCD-längd och GCD-start relativt köat tryck.
+### Andra mätomgången (addon 0.2.0), 2026-10-31
+
+Samma klient och mål, latens 58–67 ms. GCD lästes nu från Steady Shot (34120).
+
+**GCD är 1,5 s och startar vid trycket.** Alla 22 GCD-mätningar var exakt 1,50 s.
+Tidpunkten sammanfaller med makrots Kill Command-fel, alltså själva knapptrycket.
+Under wind-up startade GCD i snitt cirka 0,3 s (0,13–0,45 s) *före* skottet, medan
+Steady Shot-casten startade vid skottet. Det motsvarar alternativ 2 ovan: casten köas,
+men GCD löper redan från trycket. Ett tidigare tryck i wind-up ger alltså tidigare GCD-slut.
+Även utanför wind-up kom `UNIT_SPELLCAST_SENT` 0,09–0,17 s efter GCD-starten; om det
+beror på makrot är okänt.
+
+**Steady i grön zon kostar ingenting mätbart.** Medelintervall 2,29 s (10 cykler),
+samma som ren Auto Shot i samma session (2,29 s). Steady tryckt cirka 0,7 s efter skottet
+gav 2,72 s.
+
+**Flashen fungerade.** Alla 15 köade Steady Shots (startade vid skottet) gav flash.
+Inga av de 5 som trycktes i långsam fas gav flash.
+
+**Rotation Steady + instant.** När instanten (Arcane eller Multi-Shot) gick cirka
+1,4–1,5 s efter skottet, direkt efter GCD, var cykeln 2,28–2,32 s, alltså utan förlust.
+Multi-Shot hade cirka 0,39 s casttid. När Arcane gick sent (2,1 s efter skottet) blev
+cykeln 2,77 s. I ett fall trycktes Steady under wind-up medan Arcanes GCD fortfarande
+pågick. Då misslyckades Steady, Auto Shots wind-up startade om och cykeln blev 3,25 s.
+Det är ett enda fall, men det stöder att den röda zonen (GCD inte klar) är verklig fara.
+
+**Addonfel som rättades i 0.2.1.** Auto Shot rapporterar "Another action is in progress"
+när man trycker under wind-up, men skottet går ändå. Addonen tolkade det som blockerat
+och tappade wind-up-visningen. Det ignoreras nu under en observerad wind-up.
+
+**Inte mätt än:** Aimed Shot (en tidigare logg visade cirka 2,2 s till nästa skottstart),
+haste-effekter på GCD och wind-up, och tryck utan makro.
 
 ## Konsekvens för färgmarkering i simulatorn
 

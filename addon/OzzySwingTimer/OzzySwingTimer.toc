@@ -2,7 +2,7 @@
 ## Title: Ozzy Swing Timer
 ## Notes: Hunter pendulum swing timer with cast/GCD occupancy and wind-up queue cues.
 ## Author: Ozzy
-## Version: 0.2.0
+## Version: 0.2.1
 ## SavedVariables: OzzySwingTimerDB
 
 Model.lua
