@@ -262,8 +262,9 @@ function Display:Region(index)
     return region
 end
 
-function Display:Paint(view, forceVisible)
-    if view.phase == "idle" and self.settings.locked and not forceVisible then self.frame:Hide(); return end
+-- visible: in combat (or test mode). Locked and out of combat, the whole bar is hidden.
+function Display:Paint(view, visible)
+    if self.settings.locked and not visible then self.frame:Hide(); return end
     self.frame:Show()
     local width, height = self.settings.width, self.settings.height
     -- Explicit anchors avoid changing the pendulum's endpoint on the phase turn.

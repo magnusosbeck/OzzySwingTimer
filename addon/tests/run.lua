@@ -92,6 +92,14 @@ test("waiting before the first shot of a run is an opening, not a warning", func
     m:Advance(10.5, false); m:Shot(11); m:Advance(13.6, true); assert(m.phase == "blocked")
     assert(not m:View(13.7).opening)
 end)
+test("stopping clears the old cycle, locks and delay; the opening is empty", function()
+    local m = fresh(); m:Shot(10); m:SetGCD(11, 1.5, 11, true); m:Shot(12.8); m:Shot(16.5)
+    assert(m:View(16.6).delay)
+    m:Stop(20); m:Start(30, true)
+    local view = m:View(30.2)
+    assert(view.opening and view.fill == 0 and #view.segments == 0 and view.delay == nil)
+    assert(#m.locks == 0)
+end)
 test("haste preserves fractional weapon cooldown progress", function()
     local m = fresh(); m:Shot(10); m:SetTiming(1.4, 0.25, 11.15)
     near(m:View(11.15).cursor, 0.5)
@@ -125,6 +133,8 @@ function UnitRangedDamage() return speed end
 function GetInventoryItemID() return 123 end
 function UnitClass() return "Hunter", "HUNTER" end
 function UnitGUID() return "player-guid" end
+local inCombat = true
+function UnitAffectingCombat() return inCombat end
 function GetBuildInfo() return "2.5.6", "70577" end
 function UnitCastingInfo()
     if cast then return "Steady Shot", nil, nil, cast.start * 1000, cast.finish * 1000, nil, nil, nil, 34120 end
@@ -173,7 +183,7 @@ test("test mode paints both phases and exits", function()
     update(108); update(108.9); update(111.6)
     SlashCmdList.OZZYSWINGTIMER("test"); update(112)
     SlashCmdList.OZZYSWINGTIMER("lock"); event("STOP_AUTOREPEAT_SPELL"); update(113)
-    assert(not ns.display.frame.shown)
+    inCombat = false; update(113.1); assert(not ns.display.frame.shown); inCombat = true
 end)
 test("one noisy wind-up does not move the learned median", function()
     local t = 200
@@ -238,16 +248,16 @@ test("GCD is read from a known no-cooldown spell, not 61304", function()
     IsPlayerSpell = nil; C_Spell.GetSpellCooldown = function() return cooldown end
 end)
 test("delay is painted red right of the bar with a decimal comma", function()
-    ns.display:Paint({phase = "cooldown", fill = 0.5, cursor = 0.5, segments = {}, delay = 0.84})
+    ns.display:Paint({phase = "cooldown", fill = 0.5, cursor = 0.5, segments = {}, delay = 0.84}, true)
     assert(ns.display.delay.shown and ns.display.delay.text == "+0,8", tostring(ns.display.delay.text))
     assert(ns.display.badge.shown and ns.display.style == "rare")
-    ns.display:Paint({phase = "cooldown", fill = 0.5, cursor = 0.5, segments = {}})
+    ns.display:Paint({phase = "cooldown", fill = 0.5, cursor = 0.5, segments = {}}, true)
     assert(not ns.display.delay.shown)
     for _, style in ipairs({"elite", "rare", "button", "ring"}) do
         SlashCmdList.OZZYSWINGTIMER("badge " .. style); assert(ns.display.style == style)
     end
     SlashCmdList.OZZYSWINGTIMER("badge button")
-    ns.display:Paint({phase = "cooldown", fill = 0.5, cursor = 0.5, segments = {}, delay = 0.84})
+    ns.display:Paint({phase = "cooldown", fill = 0.5, cursor = 0.5, segments = {}, delay = 0.84}, true)
     assert(ns.display.glow.shown)
     SlashCmdList.OZZYSWINGTIMER("badge nonsense"); assert(OzzySwingTimerDB.badge == "button")
     SlashCmdList.OZZYSWINGTIMER("badge ring")
@@ -315,5 +325,12 @@ test("unlocked parts show samples and can be dragged apart", function()
     assert(not ns.display.cast.shown and not ns.display.melee.shown)
     SlashCmdList.OZZYSWINGTIMER("reset"); assert(OzzySwingTimerDB.parts == nil)
     SlashCmdList.OZZYSWINGTIMER("lock")
+end)
+test("the bar is hidden out of combat when locked", function()
+    SlashCmdList.OZZYSWINGTIMER("lock")
+    inCombat = false; update(500); assert(not ns.display.frame.shown)
+    inCombat = true; update(500.1); assert(ns.display.frame.shown)
+    SlashCmdList.OZZYSWINGTIMER("unlock"); inCombat = false; update(500.2); assert(ns.display.frame.shown)
+    SlashCmdList.OZZYSWINGTIMER("lock"); inCombat = true
 end)
 print(string.format("%d tests passed", passed))

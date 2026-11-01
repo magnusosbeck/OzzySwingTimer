@@ -1,4 +1,4 @@
-# Ozzy Swing Timer – TBC Classic 0.12.0
+# Ozzy Swing Timer – TBC Classic 0.13.0
 
 Första spelbara prototypen för **TBC Classic Anniversary 2.5.6**, Interface 20506.
 Själva addonmappen kräver inga bibliotek eller andra addons.
@@ -15,7 +15,7 @@ Om du redan är inloggad: prova `/reload`. Starta om klienten om den nya mappen 
 
 - `/ozs test` visar en återkommande demonstration utan att kasta något. Samma kommando avslutar.
 - `/ozs unlock` gör baren flyttbar med vänster musknapp. Castbaren, melee-baren och bubblan kan också dras var för sig (de visas som exempel när baren är upplåst). Positionerna sparas; `/ozs reset` återställer.
-- `/ozs lock` låser baren. Den döljs då när Auto Shot är avstängt.
+- `/ozs lock` låser baren. Låst syns den bara i combat (upplåst och i `/ozs test` syns den alltid).
 - Skjut Auto Shot mot ett mål, och prova sedan Steady Shot under den snabba fasen.
 
 Baren har en enda siffra, förskjutningen till höger:

@@ -308,7 +308,9 @@ local function initialize()
             model:Advance(now, isMoving)
             lastView = model:View(now, isMoving)
             local cast, melee = castInfo(now), meleeProgress(now)
-            display:Paint(lastView, cast ~= nil or melee ~= nil)
+            -- Shown only in combat; without the API (tests, other clients) it stays visible.
+            local inCombat = not UnitAffectingCombat or UnitAffectingCombat("player")
+            display:Paint(lastView, inCombat)
             display:PaintExtras(cast, melee)
         end
     end)
@@ -325,13 +327,13 @@ driver:SetScript("OnEvent", function(_, event, ...)
         readCast(now); readGCD(now); refreshSpeed(now); model:Start(now, moving())
         log("AUTOREPEAT_ON", AUTO)
     elseif event == "STOP_AUTOREPEAT_SPELL" or event == "PLAYER_DEAD" or event == "PLAYER_LEAVING_WORLD" then
-        model:Stop()
+        model:Stop(now)
         log(event == "STOP_AUTOREPEAT_SPELL" and "AUTOREPEAT_OFF" or event, AUTO)
     elseif event == "PLAYER_ENTERING_WORLD" then
         pickGCDSpell(); refreshSpeed(now); readCast(now); readGCD(now); logSession()
     elseif event == "SPELLS_CHANGED" then pickGCDSpell()
     elseif event == "SPELL_UPDATE_COOLDOWN" then readGCD(now)
-    elseif event == "PLAYER_EQUIPMENT_CHANGED" then learned = nil; refreshSpeed(now); model:Stop()
+    elseif event == "PLAYER_EQUIPMENT_CHANGED" then learned = nil; refreshSpeed(now); model:Stop(now)
     elseif event == "UNIT_RANGEDDAMAGE" or event == "UNIT_ATTACK_SPEED" or event == "UNIT_AURA" then
         if ... == "player" then refreshSpeed(now) end
     elseif event == "COMBAT_LOG_EVENT_UNFILTERED" then
@@ -375,7 +377,7 @@ driver:SetScript("OnEvent", function(_, event, ...)
             end
         elseif event == "UNIT_SPELLCAST_SUCCEEDED" then
             if spellID == AUTO then shot(now, "unit")
-            elseif spellID == 5384 then model:Stop()
+            elseif spellID == 5384 then model:Stop(now)
             else
                 readGCD(now)
                 -- Extra spell: anything but Steady Shot whose GCD began at its press (up to ~0.5 s before

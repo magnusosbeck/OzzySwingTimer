@@ -35,10 +35,18 @@ function Model:Reset()
     self.retryAt, self.waitingForShot = 0, false
 end
 
-function Model:Stop()
+function Model:Stop(now)
     self.active, self.phase = false, "idle"
     self.observedWindStart, self.waitingForShot = nil, false
     self.continuous = false
+    -- A new run must not paint the previous fight's cycle, locks or delay.
+    self.cooldownStart, self.cooldownEnd, self.windStart, self.windEnd = nil, nil, nil, nil
+    self.lastDelay, self.delayWorthIt = nil, false
+    local keep = {}
+    for _, lock in ipairs(self.locks) do
+        if now and lock.finish > now then keep[#keep + 1] = lock end
+    end
+    self.locks = keep
 end
 
 function Model:SetTiming(speed, wind, now)
@@ -223,7 +231,11 @@ function Model:View(now, moving)
         return {phase = "wind", fill = p, cursor = p, green = self:InPhase(moving), segments = {},
             delay = self.lastDelay, delayWorthIt = self.delayWorthIt}
     end
-    -- Before the first shot of a run (opening, still moving) waiting is normal, not a warning.
+    -- Before the first shot of a run (opening, still moving) waiting is normal, not a warning:
+    -- an empty, calm bar without lock stripes.
+    if not self.continuous then
+        return {phase = "blocked", fill = 0, cursor = 0, segments = {}, opening = true}
+    end
     return {phase = "blocked", fill = 1, cursor = 0, segments = self:Segments(), delay = self.lastDelay,
-        delayWorthIt = self.delayWorthIt, opening = not self.continuous}
+        delayWorthIt = self.delayWorthIt}
 end
