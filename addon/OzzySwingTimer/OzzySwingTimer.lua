@@ -8,6 +8,8 @@ local gcdSpell = GCD
 local RAPTOR = {[2973] = true, [14260] = true, [14261] = true, [14262] = true, [14263] = true,
     [14264] = true, [14265] = true, [14266] = true, [27014] = true}
 local meleeLast
+-- Slowest ranged speed seen with this weapon = unbuffed; faster than that is temporary haste.
+local baseSpeed
 -- Off-GCD spells never count as an extra GCD spell. Used when GetSpellBaseCooldown is unavailable:
 -- Kill Command, Rapid Fire, Readiness, Bestial Wrath, Berserking, Blood Fury, Arcane Torrent.
 local OFF_GCD = {[34026] = true, [3045] = true, [23989] = true, [19574] = true, [26296] = true,
@@ -79,7 +81,10 @@ local function refreshSpeed(now)
     local speed = UnitRangedDamage("player")
     if not number(speed) or speed <= 0 then return end
     local item = GetInventoryItemID("player", 18)
-    if item ~= weaponID then learned, samples, weaponID = nil, {}, item end
+    if item ~= weaponID then learned, samples, weaponID, baseSpeed = nil, {}, item, nil end
+    baseSpeed = math.max(baseSpeed or 0, speed)
+    local ratio = baseSpeed / speed
+    ns.arrows = ratio >= 1.5 and 3 or ratio >= 1.25 and 2 or ratio >= 1.05 and 1 or 0
     local wind = 0.5
     ns.windSource = "uppskattad (0,5 s utan haste-korrigering)"
     if GetRangedHaste then
@@ -142,6 +147,14 @@ local function castTime(spellID)
     return 0
 end
 
+local function spellName(spellID)
+    if C_Spell and C_Spell.GetSpellInfo then
+        local info = C_Spell.GetSpellInfo(spellID)
+        if info and info.name then return info.name end
+    end
+    if GetSpellInfo then return (GetSpellInfo(spellID)) end
+end
+
 local function windStart(now, source)
     -- UNIT and combat-log reports can describe the same start.
     if model.observedWindStart and now - model.observedWindStart < 0.1 then return end
@@ -185,7 +198,10 @@ local function demoView(now)
     state:UpsertLock("gcd", "preview", release + 1.5, release + 2.5)
     if t >= 2.3 then state:BeginWind(release + 2.3, false) end
     local cast = t < 1.5 and {name = "Steady Shot", progress = t / 1.5} or nil
+    state:Action("demo-steady", "Steady Shot", release, release + 1.1, release + 1.3)
+    if cycle % 2 == 1 then state:Action("demo-arcane", "Arcane Shot", release + 1.3, release + 2.8, release + 2.8) end
     local view = state:View(now, false)
+    view.arrows = cycle % 4
     -- Preview the Auto Shot badge: a worthwhile (yellow) and a costly (red) delay every other cycle.
     if cycle % 4 == 1 then view.delay, view.delayWorthIt = 0.4, true
     elseif cycle % 4 == 3 then view.delay, view.delayWorthIt = 0.8, false end
@@ -307,6 +323,7 @@ local function initialize()
             local isMoving = moving()
             model:Advance(now, isMoving)
             lastView = model:View(now, isMoving)
+            lastView.arrows = ns.arrows
             local cast, melee = castInfo(now), meleeProgress(now)
             -- Shown only in combat; without the API (tests, other clients) it stays visible.
             local inCombat = not UnitAffectingCombat or UnitAffectingCombat("player")
@@ -373,6 +390,12 @@ driver:SetScript("OnEvent", function(_, event, ...)
             if spellID == AUTO then windStart(now, "unit")
             else
                 readCast(now); readGCD(now)
+                -- Named action: the cast plus the GCD its press started (up to ~1 s earlier when queued).
+                if model.castKey then
+                    local gcdEnd = model.gcdStart > model.castStart - 1 and model.gcdEnd or 0
+                    model:Action(model.castKey, spellName(spellID), model.castStart,
+                        math.max(model.castEnd, gcdEnd), gcdEnd)
+                end
                 log("CAST_START", spellID, {sinceShot = model.lastShot and now - model.lastShot})
             end
         elseif event == "UNIT_SPELLCAST_SUCCEEDED" then
@@ -385,6 +408,11 @@ driver:SetScript("OnEvent", function(_, event, ...)
                 local extra = spellID ~= STEADY and triggersGCD(spellID) and
                     model.gcdStart > 0 and now - model.gcdStart <= 0.6
                 if extra then model:ExtraSpell(now) end
+                -- An instant occupies its GCD, from the press.
+                if extra and castTime(spellID) == 0 then
+                    model:Action("i:" .. spellID .. ":" .. model.gcdStart, spellName(spellID),
+                        model.gcdStart, model.gcdEnd, model.gcdEnd)
+                end
                 log("CAST_SUCCESS", spellID, {extra = extra or nil})
             end
         elseif event == "UNIT_SPELLCAST_FAILED" or event == "UNIT_SPELLCAST_FAILED_QUIET" or event == "UNIT_SPELLCAST_INTERRUPTED" then

@@ -37,6 +37,8 @@ local COLORS = {
     waiting = {0.50, 0.50, 0.52},    -- blocked before the first shot of a run: neutral grey
     lock = {0.30, 0.52, 1.00, 0.85}, -- cast/GCD occupancy
     stripe = {0.75, 0.86, 1.00, 0.45},
+    overflow = {0.90, 0.22, 0.18, 0.85}, -- the part of an action that does not fit before wind-up
+    haste = {1.00, 0.82, 0.10},       -- haste arrows
     melee = {0.80, 0.80, 0.85},       -- melee swing timer: steel
     worth = {1.00, 0.82, 0.25},      -- delay that paid off
     cost = {1.00, 0.30, 0.25},       -- delay that cost DPS
@@ -135,8 +137,15 @@ function Display:New(settings)
     ui.melee:SetFrameLevel(frame:GetFrameLevel() + 4)
     tint(ui.melee.fill, COLORS.melee)
 
+    -- Haste arrows above the bar: none = normal speed, » / »» / »»» = faster than unbuffed.
+    ui.haste = CreateFrame("Frame", nil, frame)
+    ui.haste:SetFrameLevel(frame:GetFrameLevel() + 4)
+    ui.hasteText = ui.haste:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    ui.hasteText:SetPoint("CENTER", ui.haste, "CENTER", 0, 0)
+    ui.hasteText:SetTextColor(COLORS.haste[1], COLORS.haste[2], COLORS.haste[3])
+
     -- Unlocked, each part can be dragged on its own; its offset from the main bar's centre is saved.
-    for key, part in pairs({cast = ui.cast, melee = ui.melee, badge = ui.badge}) do
+    for key, part in pairs({cast = ui.cast, melee = ui.melee, badge = ui.badge, haste = ui.haste}) do
         part:SetMovable(true)
         part:RegisterForDrag("LeftButton")
         part:SetScript("OnDragStart", function(self) if not settings.locked then self:StartMoving() end end)
@@ -180,6 +189,12 @@ function Display:Layout()
         part:EnableMouse(not settings.locked)
     end
     place(self.badge, "badge", "LEFT", frame, "RIGHT", 6 + 10 * k, 0)
+    place(self.haste, "haste", "BOTTOM", frame, "TOP", 0, 2 + 8 * k)
+    self.haste:SetSize(math.max(40, h * 3), math.max(12, h))
+    self.hasteText:SetFont(FONT, math.max(11, math.floor(h * 0.9)), "OUTLINE")
+    for _, region in ipairs(self.regions) do
+        region.label:SetFont(FONT, math.max(8, math.floor(h * 0.55)), "OUTLINE")
+    end
     self.badge:SetSize(icon, icon)
     self:BadgeStyle(settings.badge or "rare", icon)
     self.delay:SetFont(FONT, math.max(10, math.floor(icon * 0.42)), "OUTLINE")
@@ -258,6 +273,9 @@ function Display:Region(index)
     region.background:SetAllPoints(region)
     tint(region.background, COLORS.lock)
     region.stripes = {}
+    region.label = region:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    region.label:SetPoint("CENTER", region, "CENTER", 0, 0)
+    region.label:SetFont(FONT, math.max(8, math.floor(self.settings.height * 0.55)), "OUTLINE")
     self.regions[index] = region
     return region
 end
@@ -280,6 +298,8 @@ function Display:Paint(view, visible)
     local visible = 0
     for i, segment in ipairs(view.segments or {}) do
         local region = self:Region(i)
+        tint(region.background, segment.overflow and COLORS.overflow or COLORS.lock)
+        region.label:SetText(segment.name or "")
         local regionWidth = math.max(0.001, segment.width * width)
         region:ClearAllPoints()
         region:SetPoint("LEFT", self.frame, "LEFT", segment.left * width, 0)
@@ -324,6 +344,11 @@ function Display:Paint(view, visible)
         self.ornament:SetVertexColor(1, 1, 1, 1)
         self.icon:SetDesaturated(false)
     end
+    -- Unlocked, a sample shows where the arrows sit so they can be dragged.
+    local arrows = view.arrows or 0
+    if arrows == 0 and not self.settings.locked then arrows = 2 end
+    if arrows > 0 then self.hasteText:SetText(string.rep("»", arrows)); self.haste:Show()
+    else self.haste:Hide() end
     -- The badge belongs to the running timer, not to an idle bar shown for casting or melee only.
     if view.phase == "idle" and self.settings.locked then self.badge:Hide() else self.badge:Show() end
 end

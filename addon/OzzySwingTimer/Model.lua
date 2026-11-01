@@ -28,7 +28,7 @@ function Model:Reset()
     self.windStart, self.windEnd, self.observedWindStart = nil, nil, nil
     self.castStart, self.castEnd, self.castKey = 0, 0, nil
     self.gcdStart, self.gcdEnd, self.gcdKnown = 0, 0, false
-    self.locks, self.shots = {}, 0
+    self.locks, self.shots, self.actions = {}, 0, {}
     self.lastDelay, self.continuous = nil, false
     self.delayWorthIt, self.extraSpellAt, self.shotBefore = false, nil, nil
     self.breakEven = self.breakEven or Model.BREAK_EVEN
@@ -42,11 +42,14 @@ function Model:Stop(now)
     -- A new run must not paint the previous fight's cycle, locks or delay.
     self.cooldownStart, self.cooldownEnd, self.windStart, self.windEnd = nil, nil, nil, nil
     self.lastDelay, self.delayWorthIt = nil, false
-    local keep = {}
+    local keep, keepActions = {}, {}
     for _, lock in ipairs(self.locks) do
         if now and lock.finish > now then keep[#keep + 1] = lock end
     end
-    self.locks = keep
+    for _, action in ipairs(self.actions) do
+        if now and action.finish > now then keepActions[#keepActions + 1] = action end
+    end
+    self.locks, self.actions = keep, keepActions
 end
 
 function Model:SetTiming(speed, wind, now)
@@ -99,9 +102,30 @@ function Model:UpsertLock(kind, key, start, finish)
     if #self.locks > 64 then table.remove(self.locks, 1) end
 end
 
+-- A named spell press for the slow-phase labels: from its start until both its cast and the GCD it
+-- triggered are over. gcdEnd is kept so an interrupted cast still occupies its GCD.
+function Model:Action(key, name, start, finish, gcdEnd)
+    if not key or not start or not finish or finish <= start then return end
+    for _, action in ipairs(self.actions) do
+        if action.key == key then
+            action.name, action.start, action.finish, action.gcdEnd = name, start, finish, gcdEnd
+            return action
+        end
+    end
+    local action = {key = key, name = name, start = start, finish = finish, gcdEnd = gcdEnd}
+    self.actions[#self.actions + 1] = action
+    if #self.actions > 32 then table.remove(self.actions, 1) end
+    return action
+end
+function Model:FindAction(key)
+    for _, action in ipairs(self.actions) do if action.key == key then return action end end
+end
+
 function Model:EndCast(now)
     if self.castKey and self.castEnd > now then
         self:UpsertLock("cast", self.castKey, self.castStart, now)
+        local action = self:FindAction(self.castKey)
+        if action then action.finish = max(now, action.gcdEnd or 0) end
     end
     self.castStart, self.castEnd, self.castKey = 0, 0, nil
 end
@@ -111,6 +135,8 @@ function Model:SetCast(start, finish, key, now)
     if self.castKey and self.castKey ~= key then self:EndCast(now) end
     self.castStart, self.castEnd, self.castKey = start, finish, key
     self:UpsertLock("cast", key, start, finish)
+    local action = self:FindAction(key)
+    if action then action.finish = max(finish, action.gcdEnd or 0) end
 end
 
 function Model:SetGCD(start, duration, now, known)
@@ -194,9 +220,41 @@ function Model:Advance(now, moving)
     end
 end
 
+-- Named actions in the slow phase, one segment each with the spell name. A segment that does not fit
+-- before wind-up continues past the bar's left wall as an overflow piece (capped at one slow phase).
+function Model:ActionSegments()
+    local ws, we = self.cooldownStart, self.cooldownEnd
+    local len = we - ws
+    local sorted = {}
+    for _, action in ipairs(self.actions) do
+        if action.start < we and action.finish > ws then sorted[#sorted + 1] = action end
+    end
+    if #sorted == 0 then return nil end
+    table.sort(sorted, function(a, b) return a.start < b.start end)
+    local result, previous = {}, ws
+    for _, action in ipairs(sorted) do
+        local a, b = max(ws, action.start, previous), action.finish
+        if b > a + EPS then
+            local inside = min(we, b)
+            if inside > a + EPS then
+                result[#result + 1] = {left = (we - inside) / len, width = (inside - a) / len, name = action.name}
+            end
+            if b > we + EPS then
+                local o0, o1 = max(a, we), min(b, we + len)
+                result[#result + 1] = {left = (we - o1) / len, width = (o1 - o0) / len, overflow = true,
+                    name = inside <= a + EPS and action.name or nil}
+            end
+            previous = b
+        end
+    end
+    return result
+end
+
 function Model:Segments()
     if self.phase ~= "cooldown" and self.phase ~= "blocked" then return {} end
     if not self.cooldownStart or not self.cooldownEnd then return {} end
+    local named = self:ActionSegments()
+    if named then return named end
     local start, finish = self.cooldownStart, self.cooldownEnd
     local intervals = {}
     for _, lock in ipairs(self.locks) do
