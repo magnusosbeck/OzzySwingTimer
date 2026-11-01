@@ -18,8 +18,8 @@ function text(id, value) {
 const sim = new Simulation();
 // Measured in TBC Anniversary 2.5.6 (docs/timing-design.md); prototype = the original dummy values.
 const PRESETS = {
-  measured: {interval: 2.29, wind: 0.36, gcd: 1.5, duration: 1.11, breakEven: 1.3, gcdStart: 'press'},
-  prototype: {interval: 2.8, wind: 0.5, gcd: 1, duration: 1.5, gcdStart: 'cast'}
+  measured: {interval: 2.29, wind: 0.36, gcd: 1.5, duration: 1.11, breakEven: 1.3, gcdStart: 'press', retryGrid: '0.5'},
+  prototype: {interval: 2.8, wind: 0.5, gcd: 1, duration: 1.5, gcdStart: 'cast', retryGrid: '0'}
 };
 let selectedHandle = 'cast';
 const number = (n, digits = 2) => n.toFixed(digits).replace('.', ',');
@@ -64,10 +64,11 @@ function render(readouts = true) {
       hudLockKey = lockKey;
       $('pendulumLocks').replaceChildren(...budget.segments.map(segment => {
         const region = document.createElement('div');
-        region.className = 'pendulum-lock-region';
+        region.className = 'pendulum-lock-region' + (segment.kind === 'wait' ? ' wait' : '');
         region.style.left = segment.left * 100 + '%';
         region.style.width = segment.width * 100 + '%';
-        region.title = (segment.kind === 'cast' ? 'Steady Shot cast + GCD' : 'Arcane Shot + GCD') + ' · ' + format(segment.duration);
+        region.title = (segment.kind === 'cast' ? 'Steady Shot cast + GCD' : segment.kind === 'wait' ?
+          'Auto Shot väntar på nästa försök' : 'Arcane Shot + GCD') + ' · ' + format(segment.duration);
         return region;
       }));
     }
@@ -161,6 +162,7 @@ function settings() {
   }
   sim.config.mode = $('mode').value;
   sim.config.gcdStart = $('gcdStart').value;
+  sim.config.retryGrid = Number($('retryGrid').value);
   text('cycleTitle', 'Auto Shot cycle · ' + format(sim.config.interval));
   text('cooldownTitle', 'Weapon cooldown · ' + format(sim.config.interval - sim.config.wind));
   text('windTitle', 'Auto Shot wind-up · ' + format(sim.config.wind));
@@ -264,7 +266,7 @@ function settings() {
   text('instantLabel', '10 skada direkt · ' + format(sim.config.gcd) + ' ny GCD');
   sim.reset(); render();
 }
-for (const id of ['interval', 'wind', 'gcd', 'duration', 'breakEven', 'gcdStart', 'mode', 'queue', 'autoCast', 'castOffset', 'instantOffset', 'includeInstant', 'warmup']) {
+for (const id of ['interval', 'wind', 'gcd', 'duration', 'breakEven', 'gcdStart', 'retryGrid', 'mode', 'queue', 'autoCast', 'castOffset', 'instantOffset', 'includeInstant', 'warmup']) {
   $(id).addEventListener('input', () => {
     if (id === 'castOffset') selectedHandle = 'cast';
     if (id === 'instantOffset') selectedHandle = 'instant';

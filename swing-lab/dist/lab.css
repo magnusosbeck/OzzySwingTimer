@@ -121,3 +121,4 @@
 .pendulum-row .pendulum-track{flex:1}
 .pendulum-delay{min-width:3.2em;color:#ef6969;font-weight:600;font-size:13px;font-variant-numeric:tabular-nums}
 .pendulum-delay.worth{color:#e8c547}
+.pendulum-lock-region.wait{background:repeating-linear-gradient(135deg,#9aa3b5aa 0 4px,#5c6372aa 4px 8px);border-inline-color:#c4cad6}

@@ -323,3 +323,14 @@ assert.ok(Math.abs(alone.delay-.7)<.002);assert.equal(alone.delayWorthIt,false);
 const strict=run({gcdStart:'cast',breakEven:.5});strict.advance(1);strict.pressInstant();strict.advance(1);strict.pressCast();strict.advance(2.1);
 assert.equal(strict.delayWorthIt,false);
 console.log('OK: delay after an instant is yellow below break-even, red alone or above it');
+
+// Retry grid (measured): a slow-phase Steady ending 0.52 s before wind-up just misses the first retry.
+const grid={interval:2.29,wind:.36,gcd:1.5,duration:1.11,gcdStart:'press'};
+const slowCast=run({...grid,retryGrid:.5});slowCast.advance(.66);assert.ok(slowCast.pressCast());slowCast.advance(3);
+assert.equal(slowCast.shots,2);assert.ok(Math.abs(slowCast.delay-.48)<.003,'delay '+slowCast.delay);
+assert.ok(slowCast.actionLocks.some(l=>l.kind==='wait'));
+const noGrid=run({...grid,retryGrid:0});noGrid.advance(.66);noGrid.pressCast();noGrid.advance(3);assert.ok(noGrid.delay<.003);
+const aligned=run({...grid,retryGrid:.5});aligned.advance(.68);aligned.pressCast();aligned.advance(3);assert.ok(aligned.delay<.003,'aligned '+aligned.delay);
+const queuedGrid=run({...grid,retryGrid:.5});queuedGrid.advance(.2);assert.ok(queuedGrid.pressCast());assert.ok(queuedGrid.queued);
+queuedGrid.advance(3);assert.ok(queuedGrid.delay<.003,'queued '+queuedGrid.delay);
+console.log('OK: slow-phase cast waits for the 0.5 s Auto Shot retry grid; aligned or queued casts do not');

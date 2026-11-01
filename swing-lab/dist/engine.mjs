@@ -4,7 +4,7 @@ const EPS = 1e-8;
 export class Simulation {
   constructor(config = {}) {
     // gcdStart 'press': a cast queued in wind-up starts its GCD at the press (measured in TBC 2.5.6).
-    this.config = {interval: 2.8, wind: 0.5, duration: 1.5, gcd: 1, gcdStart: 'cast', breakEven: 1.3, mode: 'blocking', queue: true,
+    this.config = {interval: 2.8, wind: 0.5, duration: 1.5, gcd: 1, gcdStart: 'cast', breakEven: 1.3, retryGrid: 0, mode: 'blocking', queue: true,
       autoCast: false, castOffset: 0, autoInstant: false, instantOffset: .6, warmup: false, ...config};
     this.reset();
   }
@@ -14,7 +14,8 @@ export class Simulation {
       delay: null, totalDelay: 0, expected: this.config.wind, lastRelease: null, dpsSample: null,
       castFinishedAt: null, measurementStart: null, actionLocks: [], queueAcceptCount: 0,
       autoAttempted: false, instantAttempted: false,
-      lastInstantAt: null, releaseBefore: null, delayWorthIt: false, autoMisses: 0, instantMisses: 0,
+      lastInstantAt: null, releaseBefore: null, delayWorthIt: false,
+      castRetry: false, retryOrigin: null, windAt: null, autoMisses: 0, instantMisses: 0,
       events: [], eventVersion: (this.eventVersion ?? 0) + 1,
       message: 'Starta simuleringen. Första Auto Shot börjar med en uppdragning.'});
   }
@@ -44,8 +45,15 @@ export class Simulation {
     this.gcdSource = 'cast';
     this.gcdShot = this.shots;
   }
+  // Measured in TBC 2.5.6: after a cast started in the slow phase, Auto Shot only retries every
+  // retryGrid seconds counted from the cast's end; wind-up starts at the first retry once ready.
+  nextRetry(time) {
+    const grid = this.config.retryGrid;
+    return this.retryOrigin + grid * Math.max(1, Math.ceil((time - this.retryOrigin) / grid - 1e-9));
+  }
   startCast(fromQueue = false) {
     this.castLeft = this.config.duration;
+    this.castRetry = !fromQueue && this.config.retryGrid > 0 && this.lastRelease !== null;
     // A queued press may already have started its GCD.
     if (!(fromQueue && this.config.gcdStart === 'press')) this.startGcd();
     this.recordActionLock('cast', Math.max(this.config.duration, this.gcdLeft));
@@ -151,15 +159,22 @@ export class Simulation {
     if (this.gcdLeft < EPS) this.gcdLeft = 0;
     if (wasCasting && !this.castLeft) {
       this.spells++; this.castFinishedAt = this.t; this.log('Spell träffar · 10 skada');
+      if (this.castRetry) {
+        this.castRetry = false; this.retryOrigin = this.t;
+        const ready = this.lastRelease + this.config.interval - this.config.wind;
+        this.windAt = this.nextRetry(Math.max(ready, this.t));
+        this.recordActionLock('wait', this.windAt - this.t);
+      }
     }
     const blocked = this.moving || (this.config.mode === 'blocking' && this.castLeft > 0);
+    const waiting = this.windAt !== null && this.t + EPS < this.windAt;
     if (this.phase === 'cooldown') {
       this.progress += dt;
       if (this.progress + EPS >= this.config.interval - this.config.wind) {
-        this.progress = 0; this.phase = blocked ? 'blocked' : 'wind';
+        this.progress = 0; this.phase = blocked || waiting ? 'blocked' : 'wind';
       }
     } else if (this.phase === 'blocked') {
-      if (!blocked) { this.phase = 'wind'; this.progress = 0; }
+      if (!blocked && !waiting) { this.phase = 'wind'; this.progress = 0; }
     } else if (this.phase === 'wind') {
       if (blocked) { this.phase = 'blocked'; this.progress = 0; return; }
       this.progress += dt;
@@ -203,6 +218,7 @@ export class Simulation {
                 'Parallella casts blockerar inte uppdragningen' : 'Ingen avslutad cast denna cykel'};
         }
         this.expected = this.t + this.config.interval;
+        this.windAt = null; this.retryOrigin = null;
         this.releaseBefore = this.lastRelease;
         this.lastRelease = this.t; this.autoAttempted = false; this.instantAttempted = false; this.castFinishedAt = null;
         this.phase = 'cooldown'; this.progress = 0;
