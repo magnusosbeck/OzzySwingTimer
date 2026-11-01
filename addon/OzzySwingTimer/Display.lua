@@ -38,6 +38,7 @@ local COLORS = {
     lock = {0.30, 0.52, 1.00, 0.85}, -- cast/GCD occupancy
     stripe = {0.75, 0.86, 1.00, 0.45},
     overflow = {0.90, 0.22, 0.18, 0.85}, -- the part of an action that does not fit before wind-up
+    wait = {0.42, 0.46, 0.55, 0.55},     -- Auto Shot waiting for its retry after a slow-phase cast
     haste = {1.00, 0.82, 0.10},       -- haste arrows
     melee = {0.80, 0.80, 0.85},       -- melee swing timer: steel
     worth = {1.00, 0.82, 0.25},      -- delay that paid off
@@ -298,7 +299,7 @@ function Display:Paint(view, visible)
     local visible = 0
     for i, segment in ipairs(view.segments or {}) do
         local region = self:Region(i)
-        tint(region.background, segment.overflow and COLORS.overflow or COLORS.lock)
+        tint(region.background, segment.overflow and COLORS.overflow or segment.wait and COLORS.wait or COLORS.lock)
         region.label:SetText(segment.name or "")
         local regionWidth = math.max(0.001, segment.width * width)
         region:ClearAllPoints()

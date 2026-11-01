@@ -109,6 +109,21 @@ test("named actions fill the slow phase and overflow past its wall", function()
     assert(s[2].name == "Arcane Shot" and not s[2].overflow); near(s[2].width, 0.8 / 2.3); near(s[2].left, 0)
     assert(s[3].overflow); near(s[3].width, 0.7 / 2.3); near(s[3].left, -0.7 / 2.3)
 end)
+test("a slow-phase cast predicts the Auto Shot retry and its delay", function()
+    local m = fresh(); m:Shot(10)   -- weapon ready (wind-up start) at 12.3
+    local late = m:Action("s", "Steady Shot", 10.3, 11.6, 11.6); late.castEnd, late.retry = 11.6, true
+    local s = m:Segments()          -- retries at 12.1 (too early) and 12.6: predicted delay 0.3
+    assert(#s == 3, #s)
+    assert(s[1].name == "Steady Shot")
+    assert(s[2].wait and not s[2].overflow); near(s[2].width, 0.7 / 2.3)
+    assert(s[3].overflow); near(s[3].width, 0.3 / 2.3); near(s[3].left, -0.3 / 2.3)
+    local m2 = fresh(); m2:Shot(10)
+    local fits = m2:Action("s", "Steady Shot", 10.3, 11.8, 11.8); fits.castEnd, fits.retry = 11.8, true
+    for _, segment in ipairs(m2:Segments()) do assert(not segment.overflow) end
+    local m3 = fresh(); m3:Shot(10)  -- queued to the shot: no retry wait
+    m3:Action("q", "Steady Shot", 10, 11.1, 11.3).castEnd = 11.1
+    assert(#m3:Segments() == 1)
+end)
 test("an interrupted cast still occupies its GCD", function()
     local m = fresh(); m:Shot(10)
     m:SetCast(10, 11.1, "k", 10); m:Action("k", "Steady Shot", 10, 11.3, 11.3)

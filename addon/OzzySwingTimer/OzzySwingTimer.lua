@@ -393,8 +393,14 @@ driver:SetScript("OnEvent", function(_, event, ...)
                 -- Named action: the cast plus the GCD its press started (up to ~1 s earlier when queued).
                 if model.castKey then
                     local gcdEnd = model.gcdStart > model.castStart - 1 and model.gcdEnd or 0
-                    model:Action(model.castKey, spellName(spellID), model.castStart,
+                    local action = model:Action(model.castKey, spellName(spellID), model.castStart,
                         math.max(model.castEnd, gcdEnd), gcdEnd)
+                    -- Started in the slow phase (not queued to the shot): Auto Shot then waits for its retry grid.
+                    if action then
+                        action.castEnd = model.castEnd
+                        action.retry = model.phase == "cooldown" and model.lastShot ~= nil and
+                            model.castStart - model.lastShot > 0.1
+                    end
                 end
                 log("CAST_START", spellID, {sinceShot = model.lastShot and now - model.lastShot})
             end

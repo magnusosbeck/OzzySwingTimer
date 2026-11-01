@@ -13,6 +13,10 @@ Model.DELAY_THRESHOLD = 0.15
 Model.PRESS_LEAD = 0.4
 -- Delay an extra spell may cost and still gain DPS (break-even). Measured ~1.3 s for Arcane at 2.29 s.
 Model.BREAK_EVEN = 1.3
+-- Observed (21 cycles, TBC 2.5.6): after a cast that started in the slow phase, Auto Shot only starts on a
+-- 0.5 s retry grid counted from the cast's end, at the first retry once the weapon is ready. Hypothesis;
+-- a cast queued in wind-up (starting at the shot) showed no such cost.
+Model.RETRY = 0.5
 local min, max = math.min, math.max
 local function clamp(value, low, high) return max(low, min(high, value)) end
 
@@ -125,7 +129,7 @@ function Model:EndCast(now)
     if self.castKey and self.castEnd > now then
         self:UpsertLock("cast", self.castKey, self.castStart, now)
         local action = self:FindAction(self.castKey)
-        if action then action.finish = max(now, action.gcdEnd or 0) end
+        if action then action.finish, action.castEnd = max(now, action.gcdEnd or 0), now end
     end
     self.castStart, self.castEnd, self.castKey = 0, 0, nil
 end
@@ -136,7 +140,7 @@ function Model:SetCast(start, finish, key, now)
     self.castStart, self.castEnd, self.castKey = start, finish, key
     self:UpsertLock("cast", key, start, finish)
     local action = self:FindAction(key)
-    if action then action.finish = max(finish, action.gcdEnd or 0) end
+    if action then action.finish, action.castEnd = max(finish, action.gcdEnd or 0), finish end
 end
 
 function Model:SetGCD(start, duration, now, known)
@@ -230,6 +234,17 @@ function Model:ActionSegments()
         if action.start < we and action.finish > ws then sorted[#sorted + 1] = action end
     end
     if #sorted == 0 then return nil end
+    -- After a slow-phase cast, Auto Shot waits for the first retry at or after weapon-ready (we).
+    for i = 1, #sorted do
+        local action = sorted[i]
+        if action.retry and action.castEnd and action.castEnd > ws then
+            local steps = max(1, math.ceil((we - action.castEnd) / Model.RETRY - EPS))
+            local resume = action.castEnd + steps * Model.RETRY
+            if resume > action.finish + EPS then
+                sorted[#sorted + 1] = {start = max(action.castEnd, action.finish), finish = resume, wait = true}
+            end
+        end
+    end
     table.sort(sorted, function(a, b) return a.start < b.start end)
     local result, previous = {}, ws
     for _, action in ipairs(sorted) do
@@ -237,7 +252,8 @@ function Model:ActionSegments()
         if b > a + EPS then
             local inside = min(we, b)
             if inside > a + EPS then
-                result[#result + 1] = {left = (we - inside) / len, width = (inside - a) / len, name = action.name}
+                result[#result + 1] = {left = (we - inside) / len, width = (inside - a) / len, name = action.name,
+                    wait = action.wait}
             end
             if b > we + EPS then
                 local o0, o1 = max(a, we), min(b, we + len)

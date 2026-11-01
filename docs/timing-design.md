@@ -128,6 +128,17 @@ Auto Shot 632, Steady Shot 561, Arcane Shot 698. Brytpunkt för en extra spell
 Steady sen i fasen lönar sig fortfarande upp till cirka 1,1 s förskjutning. Auto Shot och Steady
 är fysiska (rustning), Arcane inte. Litet underlag; uppdatera med fler fights.
 
+### Steady i långsam fas och Auto Shots 0,5 s-rutnät (addon 0.14), 2026-11-01
+
+21 cykler med Steady tryckt 0,1–0,4 s efter skottet (2,286 s och 1,988 s med Quick Shots). Steady
+var klar 0,3–0,7 s före förväntad wind-up och gav ändå 0–0,54 s förskjutning. Händelseordningen:
+Auto Shot rapporterar misslyckat när Steady startar, vid castens slut och sedan var cirka 0,5 s.
+Wind-up startar vid första försöket (castens slut + n × 0,5 s, n ≥ 1) då vapnet är redo.
+Förutsagd förskjutning enligt den regeln träffade 19 av 20 cykler med medelfel cirka 0,06 s;
+missen låg exakt på gränsen (klar 0,50 s före wind-up), där utfallet varierade. Steady köad i wind-up
+(startar vid skottet) har tidigare inte visat denna kostnad. Quick Shots förkortade även Steady
+(cirka 0,96 s mot 1,11 s). Hypotes från en session; addonen 0.15-experiment visar förutsägelsen.
+
 **Inte mätt än:** Aimed Shot (en tidigare logg visade cirka 2,2 s till nästa skottstart),
 haste-effekter på GCD och wind-up, och tryck utan makro.
 
