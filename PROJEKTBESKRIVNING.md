@@ -1,6 +1,6 @@
 # Ozzy Swing Timer
 
-Projektbeskrivning och nuläge, uppdaterat 2026-10-31. Projektet är pausat vid addon-version **0.12.0**.
+Projektbeskrivning och nuläge, uppdaterat 2026-11-01. Projektet är pausat vid addon-version **0.15.0**.
 
 ## Vad vi försöker bygga
 
@@ -63,18 +63,20 @@ Vi har också lagt till förenklad skadesimulering med samma skada per Auto Shot
 
 Simulatorn är en experimentmiljö. Dess antaganden är inte automatiskt bekräftad spelmekanik.
 
-### TBC-addonen (0.12.0)
+### TBC-addonen (0.15.0)
 
 En fristående addonmapp för **TBC Classic Anniversary 2.5.6**, Interface 20506. Den använder bara WoW:s egna frames och texturer och behöver inga externa addonbibliotek. Den har provats i spelet, även i en dungeon.
 
 - **Huvudbaren** har castbarens ram (nio delar, tjocklek med `/ozs border`), gnista som markör och statusbar-textur. Guld för långsam fas, grön för tryck nu, röd för ur fas, grå för väntan före första skottet, blått för cast/GCD.
 - **Auto Shot-bubblan** till höger visar förskjutningen: svart bubbla med silverdrake (`/ozs badge`), gul när en extra spell lönade sig (under brytpunkten, `/ozs breakeven`), röd när det kostade DPS. Off-GCD-spells som Kill Command räknas inte.
 - **Castbar** i halv höjd med spellnamn och **melee-swingtimer** under huvudbaren.
-- **Flyttbara delar** i upplåst läge, sparade relativt huvudbaren.
+- **Flyttbara delar** i upplåst läge, sparade relativt huvudbaren. Låst syns baren bara i combat; en öppning visar en tom, lugn bar.
+- **Spellnamn** i varje fält i långsam fas; det som inte ryms före wind-up fortsätter rött ut genom barens vänstra kant.
+- **Förutsagd förskjutning** efter Steady i långsam fas (Auto Shots 0,5 s-rutnät, se nedan), och **gula hastepilar** (» / »» / »»») för tillfällig haste.
 - **Data från klienten:** vapenintervall från `UnitRangedDamage`, wind-up som median av uppmätta skott, GCD från Steady Shot (61304 rapporterar inget), casttid från `UnitCastingInfo`.
 - **Diagnostik och testpanel:** `/ozs debug on`, `/ozs mark`, `/ozs panel` med nio tester, egen skada per träff.
 
-**30 automatiserade tester passerar** med simulerade WoW-API:er.
+**37 automatiserade tester passerar** med simulerade WoW-API:er. Simulatorn har samma 0,5 s-rutnät som inställning.
 
 ### Mätningar i spelet
 
@@ -86,6 +88,7 @@ Alla mätningar finns i `docs/timing-design.md`. Kort sammanfattat:
 - GCD är 1,5 s. Med 2,29 s cykel ryms högst 1,5 GCD-förmågor per cykel (Steady varje cykel, instant varannan).
 - En handling som slutar inom cirka 0,4 s före wind-up verkar skjuta upp skottet 0,2–0,35 s (hypotes).
 - Uppmätt skada: Auto Shot 632, Steady 561, Arcane 698. Brytpunkt för en Arcane cirka 1,3 s förskjutning.
+- Efter en Steady som startar i långsam fas startar Auto Shot bara på ett 0,5 s-rutnät från castens slut (32 cykler). Steady är gratis där bara om den blir klar cirka 0,5 s före wind-up; köad i wind-up kostar den inget. Steady hör alltså hemma i wind-up och instanten i långsam fas.
 
 ## Vad vi fortfarande behöver ta reda på
 
