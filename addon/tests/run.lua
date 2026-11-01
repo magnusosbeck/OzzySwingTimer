@@ -333,4 +333,19 @@ test("the bar is hidden out of combat when locked", function()
     SlashCmdList.OZZYSWINGTIMER("unlock"); inCombat = false; update(500.2); assert(ns.display.frame.shown)
     SlashCmdList.OZZYSWINGTIMER("lock"); inCombat = true
 end)
+test("pet abilities (Growl, Dash, Gore) never touch the player's bar", function()
+    cooldown = {startTime = 600, duration = 1.5, modRate = 1}; now = 600.1; update(600.1)
+    ns.model.extraSpellAt = nil
+    local before = {phase = ns.model.phase, shots = ns.model.shots, gcd = ns.model.gcdEnd}
+    for _, spell in ipairs({27047, 23110, 35298}) do
+        event("UNIT_SPELLCAST_SENT", "pet", "target", "p" .. spell, spell)
+        event("UNIT_SPELLCAST_SUCCEEDED", "pet", "p" .. spell, spell)
+    end
+    local hit = {0, "SPELL_CAST_SUCCESS", false, "pet-guid", "", 0, 0, "target", "", 0, 0, 27047}
+    CombatLogGetCurrentEventInfo = function() return table.unpack(hit) end
+    event("COMBAT_LOG_EVENT_UNFILTERED"); CombatLogGetCurrentEventInfo = nil
+    assert(ns.model.extraSpellAt == nil and ns.model.phase == before.phase)
+    assert(ns.model.shots == before.shots and ns.model.gcdEnd == before.gcd)
+    cooldown = {startTime = 0, duration = 0}; update(602)
+end)
 print(string.format("%d tests passed", passed))
